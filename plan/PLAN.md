@@ -44,6 +44,8 @@ For the rationale behind each choice see [tech-stack.md](tech-stack.md).
 
 This file is the index. Detailed topics live in child documents — open them only when working on the relevant area, to keep context lean.
 
+Live progress: [PROGRESS.md](PROGRESS.md) — current step, decisions made, concepts internalized.
+
 **Cross-cutting topics:**
 
 - [architecture.md](architecture.md) — components, data flow, system diagram
