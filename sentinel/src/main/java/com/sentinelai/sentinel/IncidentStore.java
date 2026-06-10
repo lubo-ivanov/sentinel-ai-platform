@@ -16,15 +16,15 @@ public class IncidentStore {
             new Incident("3", "incident_3", "critical", Instant.now(), "ongoing")
     ));
 
-    List<Incident> findAll() {
+    synchronized List<Incident> findAll() {
         return incidents;
     }
 
-    Optional<Incident> findById(String id) {
+    synchronized Optional<Incident> findById(String id) {
         return incidents.stream().filter(it -> it.id().equals(id)).findFirst();
     }
 
-    Incident create(IncidentRequest request) {
+    synchronized Incident create(IncidentRequest request) {
         Incident incident = new Incident(
                 UUID.randomUUID().toString(),
                 request.title(),
