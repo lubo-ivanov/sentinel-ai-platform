@@ -1,5 +1,7 @@
-package com.sentinelai.sentinel;
+package com.sentinelai.sentinel.service;
 
+import com.sentinelai.sentinel.api.Incident;
+import com.sentinelai.sentinel.api.IncidentRequest;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -17,15 +19,15 @@ public class IncidentStore {
             "3", new Incident("3", "incident_3", "critical", Instant.now(), "ongoing")
     ));
 
-    List<Incident> findAll() {
+    public List<Incident> findAll() {
         return List.copyOf(incidents.values());
     }
 
-    Optional<Incident> findById(String id) {
+    public Optional<Incident> findById(String id) {
         return Optional.ofNullable(incidents.get(id));
     }
 
-    Incident create(IncidentRequest request) {
+    public Incident create(IncidentRequest request) {
         Incident incident = new Incident(
                 UUID.randomUUID().toString(),
                 request.title(),

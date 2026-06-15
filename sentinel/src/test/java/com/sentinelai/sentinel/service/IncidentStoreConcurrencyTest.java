@@ -1,5 +1,6 @@
-package com.sentinelai.sentinel;
+package com.sentinelai.sentinel.service;
 
+import com.sentinelai.sentinel.api.IncidentRequest;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;

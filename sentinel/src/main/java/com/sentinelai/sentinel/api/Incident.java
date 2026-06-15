@@ -1,4 +1,4 @@
-package com.sentinelai.sentinel;
+package com.sentinelai.sentinel.api;
 
 import java.time.Instant;
 

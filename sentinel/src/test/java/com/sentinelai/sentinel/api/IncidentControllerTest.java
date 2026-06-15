@@ -1,5 +1,6 @@
-package com.sentinelai.sentinel;
+package com.sentinelai.sentinel.api;
 
+import com.sentinelai.sentinel.service.IncidentStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
