@@ -10,7 +10,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 |---|------|--------|-------|
 | 01 | [Hello Spring](steps/step-01-hello-spring.md) | ✅ | Maven scaffold, `Incident` record, `IncidentStore`, `IncidentController`, `@WebMvcTest` smoke test. Spring Boot 3.4.1, Java 21. |
 | 02 | [Thread-safe incident store](steps/step-02-thread-safe-store.md) | ✅ | 4-commit progression: unsafe ArrayList → race-proving test → `synchronized` → `ConcurrentHashMap`. POST endpoint added. |
-| 03 | [Postgres persistence](steps/step-03-postgres.md) | ⬜ | |
+| 03 | [Postgres persistence](steps/step-03-postgres.md) | 🟡 | 03a deps, 03b compose+yml, 03c V1 migration, 03d-pre package refactor (api/domain/repository/service). Next: IncidentEntity + repository. |
 | 04 | [First dummy producer](steps/step-04-dummy-producer.md) | ⬜ | Repo becomes multi-module Maven here. |
 | 05 | [Docker Compose foundation](steps/step-05-docker-compose.md) | ⬜ | |
 | 06 | [Kafka producer/consumer](steps/step-06-kafka.md) | ⬜ | |
@@ -41,4 +41,4 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 
 ## Next up
 
-Step 03 — Postgres persistence. JPA entity, Flyway migration, repository, replace in-memory store. First Testcontainers test.
+Step 03 — finish Postgres persistence. Remaining: IncidentEntity, IncidentRepository, IncidentService, controller wiring, delete IncidentStore, Testcontainers @DataJpaTest.
