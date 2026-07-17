@@ -48,7 +48,7 @@ public class IncidentEntity {
 
     @Version
     @Column(nullable = false)
-    private long version;
+    private Long version;
 
     public IncidentEntity(UUID id, String title, String severity, String status) {
         this.id = id;
