@@ -2,7 +2,16 @@
 
 ## What this is
 
-A backend showcase project for interview preparation. Three dummy services emit operational events; a Sentinel service ingests them, detects anomalies, correlates incidents, and uses a local LLM to generate summaries and remediation hints. The goal is a polished, demoable system that signals depth across modern Java backend skills — not a production-grade platform.
+A backend showcase project for interview preparation. Three dummy services emit **raw signals** (loose, free-form events); a Sentinel service ingests them, **classifies** them into typed operational events, detects anomalies, correlates incidents, and uses a local LLM to generate summaries and remediation hints. The goal is a polished, demoable system that signals depth across modern Java backend skills — not a production-grade platform.
+
+## Two-schema design
+
+A deliberate architectural choice worth calling out up front:
+
+- **`RawSignal`** — the external contract. Deliberately loose. Any producer (Java, Python, a legacy service dumping log lines) can emit these by POSTing JSON. No shared jar between producers and Sentinel.
+- **`OperationalEvent`** — the internal contract. Strict, typed, produced by Sentinel's **classifier** from a `RawSignal`. Only Sentinel-internal stages see it.
+
+The classifier is rules-first (fast, deterministic, cheap) with an LLM fallback for unmatched signals (see [step 12.5](steps/step-12.5-llm-classifier-fallback.md)). This shape mirrors real-world SIEM / AIOps platforms: heterogeneous inputs at the edge, structured pipeline inside.
 
 ## Audience and goals
 
@@ -14,7 +23,7 @@ A backend showcase project for interview preparation. Three dummy services emit 
 
 Every design decision serves this 90-second demo:
 
-> Three services emit events. Kafka is killed mid-demo. Sidecars buffer to disk. Kafka comes back. Events flush. Sentinel correlates a burst of payment failures into one incident. The local LLM (Ollama) generates a summary and remediation hint. The incident appears in the dashboard with a Slack-style notification.
+> Three services emit raw signals. Sentinel classifies them into typed events — via rules for known shapes, via LLM fallback for the rest. Kafka is killed mid-demo. Sidecars buffer to disk. Kafka comes back. Events flush. Sentinel correlates a burst of classified payment failures into one incident. The local LLM (Ollama) generates a summary and remediation hint. The incident appears in the dashboard with a Slack-style notification.
 
 See [architecture.md](architecture.md) for the system diagram and [demo-script.md](demo-script.md) for the full walkthrough.
 
@@ -66,20 +75,22 @@ The project is built in ~18 small steps. Each step adds one concept, ends in a r
 | 01 | [Hello Spring](steps/step-01-hello-spring.md) | Spring Boot skeleton, REST, in-memory store |
 | 02 | [Thread-safe incident store](steps/step-02-thread-safe-store.md) | Concurrency primitives applied to real code |
 | 03 | [Postgres persistence](steps/step-03-postgres.md) | JPA, Flyway, transactions |
-| 04 | [First dummy producer](steps/step-04-dummy-producer.md) | Second Spring Boot app, HTTP event POST |
+| 04 | [First dummy producer](steps/step-04-dummy-producer.md) | Multi-module Maven, second Spring Boot app, `RawSignal` ingest |
+| 04.5 | [Rules-based classifier](steps/step-04.5-classifier.md) | `RawSignal` → `OperationalEvent` via rule engine |
 | 05 | [Docker Compose foundation](steps/step-05-docker-compose.md) | Containerize, network, run end-to-end |
 | 06 | [Kafka producer/consumer](steps/step-06-kafka.md) | Replace HTTP with Kafka, offsets, consumer groups |
 | 07 | [Anomaly detection rules](steps/step-07-anomaly-detection.md) | Sliding-window counters, Redis |
 | 08 | [Incident correlation](steps/step-08-correlation.md) | Group anomalies, dedup, state machine |
 | 09 | [Three producers, distinct failures](steps/step-09-three-producers.md) | Payment, Order, Inventory with different failure shapes |
-| 10 | [Idempotency and dedup](steps/step-10-idempotency.md) | Event IDs, exactly-once-ish semantics |
+| 10 | [Idempotency and dedup](steps/step-10-idempotency.md) | Signal/event IDs, exactly-once-ish semantics |
 | 11 | [Sidecar buffered forwarder](steps/step-11-sidecar.md) | Local HTTP, retry, disk spillover |
-| 12 | [LLM integration v1](steps/step-12-llm-v1.md) | Ollama, single summary call |
+| 12 | [LLM integration v1](steps/step-12-llm-v1.md) | Ollama, single summary call on incidents |
+| 12.5 | [LLM classifier fallback](steps/step-12.5-llm-classifier-fallback.md) | LLM proposes types for `UNCLASSIFIED` signals; human confirms → new rule |
 | 13 | [LLM provider abstraction](steps/step-13-llm-abstraction.md) | Strategy pattern, mock for tests, per-request override |
 | 14 | [Parallel LLM enrichment](steps/step-14-virtual-threads.md) | Virtual threads, fan-out summary + remediation + postmortem |
-| 15 | [Dashboard UI](steps/step-15-dashboard.md) | HTMX list, ack/resolve, live updates |
+| 15 | [Dashboard UI](steps/step-15-dashboard.md) | HTMX list, ack/resolve, live updates, signal→event traceability |
 | 16 | [Notification routing](steps/step-16-notifications.md) | Console + mock webhook, dedup, cooldown |
-| 17 | [Observability polish](steps/step-17-observability.md) | Grafana dashboard, correlation IDs, health checks |
+| 17 | [Observability polish](steps/step-17-observability.md) | Grafana dashboard, correlation IDs, classifier metrics, health checks |
 | 18 | [Demo polish and README](steps/step-18-demo-polish.md) | Demo video, README, architecture diagram |
 
 ## Working rhythm
@@ -95,3 +106,5 @@ The project is built in ~18 small steps. Each step adds one concept, ends in a r
 - **Notification channels:** console always; mock webhook likely; real Slack/Discord webhook optional polish.
 - **Sidecar language:** Java (consistent with the rest) vs Go (smaller binary, more "real" sidecar). Defaulting to Java for now; revisit at step 11.
 - **Postmortem draft generation:** include or skip in LLM enrichment. Decide at step 14.
+- **Rule DSL shape:** annotated Java class per rule vs a small config-driven engine (YAML). Decide at step 04.5.
+- **Shared DTO jar between producers and Sentinel:** *decided against.* The wire contract is JSON; no jar. Producers stay language-agnostic; Sentinel deserializes into its own internal `RawSignal` class.
