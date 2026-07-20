@@ -21,6 +21,7 @@
 
     <modules>
         <module>sentinel</module>
+        <module>payment-service</module>
     </modules>
 
     <dependencyManagement>

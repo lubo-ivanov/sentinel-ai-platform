@@ -1,0 +1,13 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: payment-service
+
+sentinel:
+  url: http://localhost:8080
+  signals-path: /api/v1/signals
+
+payment:
+  emit-interval-ms: 5000
