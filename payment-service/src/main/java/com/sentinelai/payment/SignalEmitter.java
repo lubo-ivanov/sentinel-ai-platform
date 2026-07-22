@@ -19,7 +19,7 @@ public class SignalEmitter {
     private static final String ID_PREFIX = "pay-";
 
     private record Signal(String id, String occurredAt, String message, Hints hints) {}
-    private record Hints(double amount, String currency) {}
+    private record Hints(String provider, double amount, String currency) {}
 
     private final RestClient restClient;
     private final String signalsPath;
@@ -41,8 +41,8 @@ public class SignalEmitter {
         Signal payload = new Signal(
                 ID_PREFIX + counter.incrementAndGet(),
                 Instant.now().toString(),
-                "payment processed",
-                new Hints(42.00, "USD")
+                "stripe timeout after 5000ms",
+                new Hints("stripe", 42.00, "USD")
         );
 
         restClient.post()
