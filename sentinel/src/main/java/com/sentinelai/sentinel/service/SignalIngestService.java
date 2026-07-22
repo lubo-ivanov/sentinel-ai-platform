@@ -1,6 +1,7 @@
 package com.sentinelai.sentinel.service;
 
 import com.sentinelai.sentinel.api.RawSignal;
+import com.sentinelai.sentinel.classifier.ClassifierService;
 import com.sentinelai.sentinel.domain.RawSignalEntity;
 import com.sentinelai.sentinel.repository.RawSignalRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +18,10 @@ import java.util.UUID;
 public class SignalIngestService {
 
     private final RawSignalRepository repository;
+    private final ClassifierService classifierService;
 
     public void ingest(String source, RawSignal signal) {
-        repository.save(new RawSignalEntity(
+        RawSignalEntity saved = repository.save(new RawSignalEntity(
                 UUID.randomUUID(),
                 signal.id(),
                 source,
@@ -27,5 +29,6 @@ public class SignalIngestService {
                 signal.message(),
                 signal.hints()
         ));
+        classifierService.classifyAndStore(saved);
     }
 }
