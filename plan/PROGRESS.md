@@ -12,12 +12,13 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 | 02 | [Thread-safe incident store](steps/step-02-thread-safe-store.md) | ✅ | 4-commit progression: unsafe ArrayList → race-proving test → `synchronized` → `ConcurrentHashMap`. POST endpoint added. |
 | 03 | [Postgres persistence](steps/step-03-postgres.md) | ✅ | 03a deps, 03b compose+yml, 03c V1 migration, 03d-pre package refactor (api/domain/repository/service), 03d IncidentEntity + repository + IncidentService, DTO/entity split, IncidentStore deleted. |
 | 04 | [First dummy producer](steps/step-04-dummy-producer.md) | ✅ | 04a multi-module Maven, 04b SignalController + RawSignal DTO + ingest service, 04c payment-service producer (RestClient + @Scheduled + console control), 04d integration test intentionally skipped (manual verification + unit tests deemed sufficient). |
-| 04.5 | [Rules-based classifier](steps/step-04.5-classifier.md) | 🟡 | 04.5a types ✅, 04.5b DB + entity ✅ (repository still to write), 04.5c RuleEngine ✅, 04.5d PaymentProviderTimeoutRule ✅. **In progress: 04.5e — ClassifierService + wire into SignalIngestService (need to write OperationalEventRepository first).** Next after: 04.5f metrics, 04.5g service-level test. |
+| 04.5 | [Rules-based classifier](steps/step-04.5-classifier.md) | ✅ | 04.5a types, 04.5b DB + entity + repository, 04.5c RuleEngine, 04.5d PaymentProviderTimeoutRule, 04.5e ClassifierService + wire into SignalIngestService, 04.5f actuator metrics (classifier.duration timer w/ percentiles, classifier.matched + classifier.unclassified counters), 04.5g ClassifierServiceTest. End-to-end verified via payment-service → Sentinel → operational_events with metrics visible on /actuator/metrics. |
 | 05 | [Docker Compose foundation](steps/step-05-docker-compose.md) | ⬜ | |
 | 06 | [Kafka producer/consumer](steps/step-06-kafka.md) | ⬜ | Two topics now: `signals.raw`, `events.classified`. |
 | 07 | [Anomaly detection rules](steps/step-07-anomaly-detection.md) | ⬜ | Operates on `OperationalEvent`. |
 | 08 | [Incident correlation](steps/step-08-correlation.md) | ⬜ | |
 | 09 | [Three producers, distinct failures](steps/step-09-three-producers.md) | ⬜ | |
+| 09.5 | [Rule polish + design patterns](steps/step-09.5-rule-polish-patterns.md) | ⬜ | Decorators (NegationGuard, ConfidenceThreshold, Audit, Logging), `Classifier` Strategy interface, structured-hints-first rules. Justified by duplication once 3–4 rules exist. |
 | 10 | [Idempotency and dedup](steps/step-10-idempotency.md) | ⬜ | Applies to both signals and events. |
 | 11 | [Sidecar buffered forwarder](steps/step-11-sidecar.md) | ⬜ | |
 | 12 | [LLM integration v1](steps/step-12-llm-v1.md) | ⬜ | Enrichment of incidents. |
@@ -48,14 +49,4 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 
 ## Next up
 
-**Step 04.5c — Rule engine.** Two files under `sentinel/src/main/java/com/sentinelai/sentinel/classifier/`:
-
-1. **`RuleEngine.java`** — `@Component` that receives `List<ClassificationRule>` via constructor injection (Spring auto-collects all `@Component`-annotated rules). Public method `classify(RawSignalEntity)` iterates the list first-match-wins; returns an `UNCLASSIFIED` `OperationalEvent` if no rule matches. Startup log lists loaded rules.
-2. **Skip the `NoopRule`** placeholder — go straight to 04.5d (`PaymentProviderTimeoutRule`, real logic, unit-tested).
-
-After 04.5c/d: **04.5e** wires `ClassifierService` into `SignalIngestService` (sync, same transaction). Then **04.5f** actuator metrics, **04.5g** end-to-end signal→event service test.
-
-Design decisions already agreed:
-- Synchronous classification in the ingest transaction (Kafka comes in step 06).
-- No LLM in the classifier at 04.5 — LLM is cold-path only, step 12.5.
-- Annotated Java rules (Option A), not YAML.
+**Step 05 — Docker Compose foundation.** Consolidate the ad-hoc `docker-compose.yml` (currently just Postgres) into a proper multi-service compose file that can spin up the full local stack.

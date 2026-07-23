@@ -82,6 +82,7 @@ The project is built in ~18 small steps. Each step adds one concept, ends in a r
 | 07 | [Anomaly detection rules](steps/step-07-anomaly-detection.md) | Sliding-window counters, Redis |
 | 08 | [Incident correlation](steps/step-08-correlation.md) | Group anomalies, dedup, state machine |
 | 09 | [Three producers, distinct failures](steps/step-09-three-producers.md) | Payment, Order, Inventory with different failure shapes |
+| 09.5 | [Rule polish + design patterns](steps/step-09.5-rule-polish-patterns.md) | Decorators for cross-cutting concerns, `Classifier` Strategy interface, structured-hints-first rules |
 | 10 | [Idempotency and dedup](steps/step-10-idempotency.md) | Signal/event IDs, exactly-once-ish semantics |
 | 11 | [Sidecar buffered forwarder](steps/step-11-sidecar.md) | Local HTTP, retry, disk spillover |
 | 12 | [LLM integration v1](steps/step-12-llm-v1.md) | Ollama, single summary call on incidents |

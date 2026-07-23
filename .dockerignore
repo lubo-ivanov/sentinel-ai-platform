@@ -1,0 +1,6 @@
+**/target
+**/.idea
+**/.git
+**/*.iml
+**/out
+**/.DS_Store
