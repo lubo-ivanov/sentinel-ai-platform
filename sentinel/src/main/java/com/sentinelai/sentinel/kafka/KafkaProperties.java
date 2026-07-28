@@ -18,7 +18,9 @@ public record KafkaProperties(
             int maxPollRecords,
             Duration pollTimeout,
             Duration pauseBetweenPolls,
-            Duration shutdownTimeout
+            Duration shutdownTimeout,
+            int maxAttempts,
+            Duration retryBackoff
     ) {
     }
 

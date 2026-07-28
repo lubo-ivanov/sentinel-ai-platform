@@ -25,6 +25,8 @@ kafka:
     poll-timeout: 3s
     pause-between-polls: 100ms
     shutdown-timeout: 10s
+    max-attempts: 3
+    retry-backoff: 500ms
   topics:
     - name: signals.raw
       partitions: 6

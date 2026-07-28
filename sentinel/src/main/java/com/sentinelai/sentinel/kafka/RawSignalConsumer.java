@@ -39,4 +39,18 @@ public class RawSignalConsumer extends AbstractKafkaConsumer<RawSignal> {
         ingestService.ingest("payment-service", signal);
         log.debug("Ingested signal id={} from offset={}", signal.id(), raw.offset());
     }
+
+    @Override
+    protected void onProcessingFailed(ConsumerRecord<String, String> record, Throwable cause) {
+        ingestService.recordIngestionFailure(
+                record.value(),
+                cause,
+                record.topic(),
+                record.partition(),
+                record.offset()
+        );
+        log.warn("Recorded ingestion failure for offset={} cause={}",
+                record.offset(), cause.getClass().getSimpleName()
+        );
+    }
 }

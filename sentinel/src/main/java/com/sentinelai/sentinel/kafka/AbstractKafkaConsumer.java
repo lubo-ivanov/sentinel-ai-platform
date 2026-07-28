@@ -1,5 +1,6 @@
 package com.sentinelai.sentinel.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -34,6 +35,8 @@ public abstract class AbstractKafkaConsumer<V> {
     protected abstract Class<V> valueType();
 
     protected abstract void process(V value, ConsumerRecord<String, String> raw);
+
+    protected abstract void onProcessingFailed(ConsumerRecord<String, String> record, Throwable cause);
 
     @PostConstruct
     final void start() {
@@ -78,19 +81,48 @@ public abstract class AbstractKafkaConsumer<V> {
         if (records.isEmpty()) return;
         log.info("Polled {} records from {}", records.count(), topicName());
 
-        for (ConsumerRecord<String, String> record : records) {
-            handleRecord(record);
+        try {
+            for (ConsumerRecord<String, String> record : records) {
+                handleRecord(record);
+            }
+            consumer.commitSync();
+        } catch (Exception e) {
+            log.error("Batch processing halted before commit — will retry on next poll", e);
         }
-        consumer.commitSync();
+
     }
 
     private void handleRecord(ConsumerRecord<String, String> record) {
+        int maxAttempts = kafkaConfig.maxAttempts();
+        long backoffMs = kafkaConfig.retryBackoff().toMillis();
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                V value = objectMapper.readValue(record.value(), valueType());
+                process(value, record);
+                return;
+            } catch (JsonProcessingException e) {
+                log.error("Deserialization failed for offset={} — no retry", record.offset(), e);
+                onProcessingFailed(record, e);
+                return;
+            } catch (Exception e) {
+                log.warn("Processing attempt {}/{} failed for offset={}: {}",
+                        attempt, maxAttempts, record.offset(), e.getMessage());
+                if (attempt == maxAttempts) {
+                    log.error("Exhausted {} attempts for offset={}", maxAttempts, record.offset(), e);
+                    onProcessingFailed(record, e);
+                    return;
+                }
+                sleepQuietly(backoffMs);
+            }
+        }
+    }
+
+    private static void sleepQuietly(long millis) {
         try {
-            V value = objectMapper.readValue(record.value(), valueType());
-            process(value, record);
-        } catch (Exception e) {
-            log.error("Failed to process record offset={} value={}: {}",
-                    record.offset(), record.value(), e.getMessage());
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

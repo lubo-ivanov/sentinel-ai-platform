@@ -37,6 +37,14 @@ public class KafkaConfig {
         return props.consumer().shutdownTimeout();
     }
 
+    public int maxAttempts() {
+        return props.consumer().maxAttempts();
+    }
+
+    public Duration retryBackoff() {
+        return props.consumer().retryBackoff();
+    }
+
     public KafkaProperties.Topic topic(String name) {
         return topics().stream()
                 .filter(t -> t.name().equals(name))
