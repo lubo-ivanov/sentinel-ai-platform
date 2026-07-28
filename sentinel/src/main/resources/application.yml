@@ -15,6 +15,21 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+kafka:
+  bootstrap-servers: kafka:9092
+  consumer:
+    group-id: sentinel-signals
+    auto-offset-reset: earliest
+    enable-auto-commit: false
+    max-poll-records: 500
+    poll-timeout: 3s
+    pause-between-polls: 100ms
+    shutdown-timeout: 10s
+  topics:
+    - name: signals.raw
+      partitions: 6
+      replication-factor: 1
+
 management:
   endpoints:
     web:

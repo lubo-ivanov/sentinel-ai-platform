@@ -27,6 +27,7 @@ Add Order and Inventory services alongside Payment. Each emits *different shapes
 ## Things to think about
 
 - **Consistency of event schema.** All three services emit the same `OperationalEvent` shape with different `type` and `source` values. Don't let services diverge.
+- **Kafka partition key switch.** Payment-service currently keys by `signal.id` (random distribution — no ordering guarantees). Once 3 producers exist, add `source` field to `RawSignal` and switch key to `source` so all signals from `payment-service` land on the same partition (per-producer ordering preserved). Also propagate `source` into the record on the consumer side so `SignalIngestService.ingest(source, signal)` gets the real producer identity rather than the hardcoded `"payment-service"` from step 06.
 - **Demo control.** Each service should expose a small "trigger failure burst" admin endpoint so the demo can deterministically cause an anomaly without waiting for random injection.
 - **Dependencies between services.** Skip them. Each service is independent. Multi-service incident correlation (e.g., "payment failure caused order failure") is interesting but out of scope; keep it for an interview talking point: *"In a real system I'd correlate across services via a shared correlation_id; here each service is independent for simplicity."*
 

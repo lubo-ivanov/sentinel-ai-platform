@@ -79,6 +79,8 @@ The project is built in ~18 small steps. Each step adds one concept, ends in a r
 | 04.5 | [Rules-based classifier](steps/step-04.5-classifier.md) | `RawSignal` → `OperationalEvent` via rule engine |
 | 05 | [Docker Compose foundation](steps/step-05-docker-compose.md) | Containerize, network, run end-to-end |
 | 06 | [Kafka producer/consumer](steps/step-06-kafka.md) | Replace HTTP with Kafka, offsets, consumer groups |
+| 06.5 | [Multi-broker Kafka (prod-like)](steps/step-06.5-multi-broker-kafka.md) | 3 brokers, replication.factor=3, min.insync.replicas=2, broker-kill failover demo |
+| 06f | [Serde polish (optional)](steps/step-06f-serde-polish.md) | Push JSON conversion into a custom `Serializer<T>`/`Deserializer<T>` — same wire format, cleaner types |
 | 07 | [Anomaly detection rules](steps/step-07-anomaly-detection.md) | Sliding-window counters, Redis |
 | 08 | [Incident correlation](steps/step-08-correlation.md) | Group anomalies, dedup, state machine |
 | 09 | [Three producers, distinct failures](steps/step-09-three-producers.md) | Payment, Order, Inventory with different failure shapes |

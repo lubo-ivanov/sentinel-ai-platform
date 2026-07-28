@@ -31,7 +31,7 @@ public class OperationalEventEntity {
     @Id
     private UUID id;
 
-    @Column(name = "source_signal_id", nullable = false)
+    @Column(name = "source_signal_id")
     private UUID sourceSignalId;
 
     @Column(nullable = false, length = 64)

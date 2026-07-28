@@ -5,9 +5,16 @@ spring:
   application:
     name: payment-service
 
+kafka:
+  bootstrap-servers: kafka:9092
+  producer:
+    acks: all
+    enable-idempotence: true
+
 sentinel:
   url: http://localhost:8082
   signals-path: /api/v1/signals
+  signals-topic: signals.raw
 
 payment:
   emit-interval-ms: 5000

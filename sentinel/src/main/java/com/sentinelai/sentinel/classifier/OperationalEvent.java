@@ -19,6 +19,6 @@ public record OperationalEvent(
             String ruleId,
             double confidence
     ) {
-        public enum Method { RULE, LLM, MANUAL }
+        public enum Method { RULE, LLM, MANUAL, FAILURE }
     }
 }
