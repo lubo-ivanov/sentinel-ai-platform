@@ -5,6 +5,7 @@ import com.sentinelai.sentinel.classifier.ClassifierService;
 import com.sentinelai.sentinel.classifier.FailureType;
 import com.sentinelai.sentinel.classifier.OperationalEvent;
 import com.sentinelai.sentinel.classifier.Severity;
+import com.sentinelai.sentinel.detection.AnomalyDetectionService;
 import com.sentinelai.sentinel.domain.OperationalEventEntity;
 import com.sentinelai.sentinel.domain.RawSignalEntity;
 import com.sentinelai.sentinel.repository.OperationalEventRepository;
@@ -26,6 +27,7 @@ public class SignalIngestService {
     private final RawSignalRepository repository;
     private final ClassifierService classifierService;
     private final OperationalEventRepository operationalEventRepository;
+    private final AnomalyDetectionService anomalyDetectionService;
 
     public void ingest(String source, RawSignal signal) {
         RawSignalEntity saved = repository.save(new RawSignalEntity(
@@ -36,7 +38,9 @@ public class SignalIngestService {
                 signal.message(),
                 signal.hints()
         ));
-        classifierService.classifyAndStore(saved);
+
+        OperationalEvent event = classifierService.classifyAndStore(saved);
+        anomalyDetectionService.evaluate(event);
     }
 
     public void recordIngestionFailure(

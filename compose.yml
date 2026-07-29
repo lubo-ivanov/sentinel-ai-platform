@@ -45,6 +45,19 @@ services:
       retries: 10
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    container_name: sentinel-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   sentinel:
     build:
       context: .
@@ -54,6 +67,8 @@ services:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "8082:8082"
@@ -84,3 +99,4 @@ services:
 volumes:
   postgres-data:
   kafka-data:
+  redis-data:

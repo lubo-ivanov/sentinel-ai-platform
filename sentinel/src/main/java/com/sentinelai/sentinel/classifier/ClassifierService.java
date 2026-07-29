@@ -13,9 +13,10 @@ public class ClassifierService {
     private final RuleEngine ruleEngine;
     private final OperationalEventRepository operationalEventRepository;
 
-    public void classifyAndStore(RawSignalEntity signal) {
+    public OperationalEvent classifyAndStore(RawSignalEntity signal) {
         OperationalEvent event = ruleEngine.classify(signal);
         operationalEventRepository.save(toEntity(event));
+        return event;
     }
 
     private OperationalEventEntity toEntity(OperationalEvent event) {
