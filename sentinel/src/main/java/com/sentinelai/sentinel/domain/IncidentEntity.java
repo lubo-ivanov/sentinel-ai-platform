@@ -38,11 +38,27 @@ public class IncidentEntity {
     @Column(nullable = false, length = 16)
     private String status;
 
+    @Column(nullable = false, length = 64)
+    private String fingerprint;
+
+    @Generated(event = INSERT)
+    @Column(name = "first_seen", nullable = false)
+    private Instant firstSeen;
+
+    @Setter
+    @Generated(event = INSERT)
+    @Column(name = "last_seen", nullable = false)
+    private Instant lastSeen;
+
+    @Setter
+    @Column(name = "anomaly_count", nullable = false)
+    private Integer anomalyCount;
+
     @Generated(event = INSERT)
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
 
-    @Generated(event = { INSERT, UPDATE })
+    @Generated(event = {INSERT, UPDATE})
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
 
@@ -50,11 +66,13 @@ public class IncidentEntity {
     @Column(nullable = false)
     private Long version;
 
-    public IncidentEntity(UUID id, String title, String severity, String status) {
+    public IncidentEntity(UUID id, String title, String severity, String status, String fingerprint, Integer anomalyCount) {
         this.id = id;
         this.title = title;
         this.severity = severity;
         this.status = status;
+        this.fingerprint = fingerprint;
+        this.anomalyCount = anomalyCount;
     }
 
 }

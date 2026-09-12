@@ -33,7 +33,9 @@ public class IncidentService {
                 UUID.randomUUID(),
                 request.title(),
                 request.severity(),
-                "OPEN"
+                "OPEN",
+                "",
+                1
         );
         IncidentEntity saved = repository.save(entity);
         return toDto(saved);
@@ -45,6 +47,10 @@ public class IncidentService {
                 e.getTitle(),
                 e.getSeverity(),
                 e.getStatus(),
+                e.getFingerprint(),
+                e.getFirstSeen(),
+                e.getLastSeen(),
+                e.getAnomalyCount(),
                 e.getCreatedAt(),
                 e.getUpdatedAt(),
                 e.getVersion()

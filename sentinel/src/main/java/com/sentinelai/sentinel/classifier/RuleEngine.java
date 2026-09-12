@@ -35,6 +35,7 @@ public class RuleEngine {
     public OperationalEvent classify(RawSignalEntity signal) {
         return classifyTimer.record(() -> doClassify(signal));
     }
+
     public OperationalEvent doClassify(RawSignalEntity signal) {
         for (ClassificationRule rule : rules) {
             Optional<OperationalEvent> match = rule.apply(signal);

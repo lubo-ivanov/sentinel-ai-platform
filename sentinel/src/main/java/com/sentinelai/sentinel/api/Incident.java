@@ -8,6 +8,10 @@ public record Incident(
         String title,
         String severity,
         String status,
+        String fingerprint,
+        Instant firstSeen,
+        Instant lastSeen,
+        Integer anomalyCount,
         Instant createdAt,
         Instant updatedAt,
         Long version
