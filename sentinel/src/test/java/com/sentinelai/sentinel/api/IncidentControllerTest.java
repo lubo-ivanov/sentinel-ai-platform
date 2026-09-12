@@ -28,7 +28,8 @@ public class IncidentControllerTest {
     void findAll_returnsIncidents() throws Exception {
         UUID id = UUID.randomUUID();
         Incident incident = new Incident(
-                id, "boom", "HIGH", "OPEN",
+                id, "boom", "HIGH", "OPEN", "",
+                Instant.now(), Instant.now(), 1,
                 Instant.now(), Instant.now(), 0L
         );
 
