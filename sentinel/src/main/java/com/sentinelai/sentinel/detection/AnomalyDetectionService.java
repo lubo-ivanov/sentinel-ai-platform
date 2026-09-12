@@ -1,6 +1,7 @@
 package com.sentinelai.sentinel.detection;
 
 import com.sentinelai.sentinel.classifier.OperationalEvent;
+import com.sentinelai.sentinel.detection.correlation.AnomalyListener;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;

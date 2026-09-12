@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.sentinelai.sentinel.domain.IncidentStatus.OPEN;
+
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -33,7 +35,7 @@ public class IncidentService {
                 UUID.randomUUID(),
                 request.title(),
                 request.severity(),
-                "OPEN",
+                OPEN,
                 "",
                 1
         );
@@ -46,7 +48,7 @@ public class IncidentService {
                 e.getId(),
                 e.getTitle(),
                 e.getSeverity(),
-                e.getStatus(),
+                e.getStatus().name(),
                 e.getFingerprint(),
                 e.getFirstSeen(),
                 e.getLastSeen(),

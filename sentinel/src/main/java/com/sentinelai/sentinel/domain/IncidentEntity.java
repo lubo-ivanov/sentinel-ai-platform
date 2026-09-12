@@ -2,6 +2,8 @@ package com.sentinelai.sentinel.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -35,8 +37,9 @@ public class IncidentEntity {
     private String severity;
 
     @Setter
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
-    private String status;
+    private IncidentStatus status;
 
     @Column(nullable = false, length = 64)
     private String fingerprint;
@@ -66,7 +69,7 @@ public class IncidentEntity {
     @Column(nullable = false)
     private Long version;
 
-    public IncidentEntity(UUID id, String title, String severity, String status, String fingerprint, Integer anomalyCount) {
+    public IncidentEntity(UUID id, String title, String severity, IncidentStatus status, String fingerprint, Integer anomalyCount) {
         this.id = id;
         this.title = title;
         this.severity = severity;
