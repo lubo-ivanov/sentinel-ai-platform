@@ -4,6 +4,7 @@ import com.sentinelai.sentinel.service.IncidentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,5 +38,15 @@ public class IncidentController {
     public ResponseEntity<Incident> create(@RequestBody IncidentRequest request) {
         Incident created = incidentService.create(request);
         return ResponseEntity.status(CREATED).body(created);
+    }
+
+    @PatchMapping("/{id}/ack")
+    public ResponseEntity<Incident> acknowledge(@PathVariable UUID id) {
+        return ResponseEntity.ok(incidentService.acknowledge(id));
+    }
+
+    @PatchMapping("/{id}/resolve")
+    public ResponseEntity<Incident> resolve(@PathVariable UUID id) {
+        return ResponseEntity.ok(incidentService.resolve(id));
     }
 }
