@@ -15,6 +15,10 @@ The initial `PaymentProviderTimeoutRule` is deliberately naive (free-text regex 
 - Negation handling — reject a match if a negation token ("no", "not", "without") appears near the keyword.
 - Disambiguation — "connection timeout" vs "provider timeout" vs "read timeout" shouldn't collapse to the same `FailureType`.
 - Per-rule confidence — return the confidence value in `OperationalEvent.Classification.confidence` so downstream stages can act on low-confidence classifications.
+- Extract `OperationalEvent.fromRule(signal, ruleId, type, severity, payload)` static factory to eliminate constructor boilerplate repeated in every rule.
+- Extract shared `hint()` helper out of individual rules into a base class or utility (currently duplicated in each rule).
+- **Hint key constants:** each rule should define `private static final String KEY_X = "x"` for every hint key it reads, instead of inline string literals. Prevents typos between rule and signal emitter.
+- **commons-lang3 audit:** `commons-lang3` was added in step 09d. Before finishing this step, scan the **entire sentinel module** for places that can be simplified with it — e.g. replace Micrometer `StringUtils.isEmpty` with `StringUtils.isBlank` (Apache), replace manual null-or-blank guards across services/repositories/controllers, consider `ObjectUtils`, `Validate.notNull`, `StringUtils.defaultIfNull`, etc. Not just rules — services, controllers, domain classes too.
 
 ### Decorator pattern for cross-cutting concerns
 Wrap `ClassificationRule` instances with reusable decorators. Each rule opts in to whichever wrapping stack makes sense for *it* — decorators are per-rule, not global.

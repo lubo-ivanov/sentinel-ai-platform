@@ -13,12 +13,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static io.micrometer.common.util.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 @Component
-public class PaymentProviderTimeoutRule implements ClassificationRule {
-    private static final String RULE_ID = "payment.provider-timeout.v1";
-    private static final Pattern TIMEOUT_PATTERN = Pattern.compile("(?i)\\btimeout\\b");
+public class StockReservationTimeoutRule implements ClassificationRule {
+
+    private static final String RULE_ID = "inventory.stock-reservation-timeout.v1";
+    private static final Pattern PATTERN = Pattern.compile("(?i)\\bstock\\s+reservation\\s+timeout\\b");
 
     @Override
     public String ruleId() {
@@ -28,28 +29,30 @@ public class PaymentProviderTimeoutRule implements ClassificationRule {
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
         if (isEmpty(signal.getMessage())
-                || !TIMEOUT_PATTERN.matcher(signal.getMessage()).find()) {
+                || !PATTERN.matcher(signal.getMessage()).find()) {
             return Optional.empty();
         }
 
-        String provider = hint(signal, "provider");
-        if (provider == null) {
+        String item = hintAsString(signal, "item");
+        String warehouse = hintAsString(signal, "warehouse");
+
+        if (item == null || warehouse == null) {
             return  Optional.empty();
         }
 
-       return Optional.of(new OperationalEvent(
+        return Optional.of(new OperationalEvent(
                 UUID.randomUUID(),
                 signal.getId(),
                 signal.getSource(),
                 signal.getOccurredAt(),
-                FailureType.PAYMENT_PROVIDER_TIMEOUT,
+                FailureType.STOCK_RESERVATION_TIMEOUT,
                 Severity.ERROR,
                 new OperationalEvent.Classification(OperationalEvent.Classification.Method.RULE, RULE_ID, 1.0),
-                Map.of("provider", provider)
-       ));
+                Map.of("item", item, "warehouse", warehouse))
+        );
     }
 
-    private static String hint(RawSignalEntity signal, String key) {
+    private static String hintAsString(RawSignalEntity signal, String key) {
         Map<String, Object> hints = signal.getHints();
         if (hints == null) return null;
         return Objects.toString(hints.get(key), null);
