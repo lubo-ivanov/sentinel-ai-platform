@@ -1,8 +1,8 @@
-package com.sentinelai.payment.kafka;
+package com.sentinelai.order.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sentinelai.payment.signal.RawSignal;
+import com.sentinelai.order.signal.RawSignal;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -17,7 +17,6 @@ import java.util.concurrent.Future;
 @Component
 @Slf4j
 public class SignalPublisher {
-
     private final Producer<String, String> producer;
     private final ObjectMapper objectMapper;
     private final String topic;
@@ -55,5 +54,4 @@ public class SignalPublisher {
         log.info("Closing Kafka producer...");
         producer.close();
     }
-
 }
