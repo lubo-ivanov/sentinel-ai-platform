@@ -38,7 +38,7 @@ public class SignalPublisher {
             throw new IllegalStateException("Failed to serialise RawSignal", e);
         }
 
-        ProducerRecord<String, String> record = new ProducerRecord<>(topic, signal.id(), json);
+        ProducerRecord<String, String> record = new ProducerRecord<>(topic, signal.source(), json);
         return producer.send(record, (metadata, exception) -> {
             if (exception != null) {
                 log.error("Failed to publish signal key={} to topic={}", signal.id(), topic, exception);

@@ -18,6 +18,7 @@ Insert a sidecar in front of each producer. Producers POST events to localhost; 
 - `/health` endpoint reflecting Kafka reachability, buffer depth, disk-spilled count.
 - Producer services updated to POST to `http://sidecar:<port>/events` instead of directly to Kafka.
 - Each producer paired with its own sidecar instance in `docker-compose.yml`.
+- **`source` field ownership moves to sidecar.** In step 09, each producer hardcodes its own `source` in `RawSignal`. In step 11, the sidecar stamps `source` automatically (it knows which service it's attached to via config) and producers drop the field. Wire format stays the same.
 
 ## What to learn
 

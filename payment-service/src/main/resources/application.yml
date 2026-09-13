@@ -12,8 +12,6 @@ kafka:
     enable-idempotence: true
 
 sentinel:
-  url: http://localhost:8082
-  signals-path: /api/v1/signals
   signals-topic: signals.raw
 
 payment:
