@@ -16,6 +16,7 @@ Insert a sidecar in front of each producer. Producers POST events to localhost; 
 - Disk spillover — append-only files in a configured directory, rotated by size. New files when a roll threshold hits.
 - On Kafka recovery: drain disk spillover before resuming in-memory publishing.
 - `/health` endpoint reflecting Kafka reachability, buffer depth, disk-spilled count.
+- **`POST /admin/trigger-burst` endpoint** — re-publishes the last buffered signal N times (N ≥ threshold) immediately onto Kafka. Sidecar already holds the signal in its buffer, so no extra state needed. Used to demo anomaly detection on demand without waiting for the scheduler.
 - Producer services updated to POST to `http://sidecar:<port>/events` instead of directly to Kafka.
 - Each producer paired with its own sidecar instance in `docker-compose.yml`.
 - **`source` field ownership moves to sidecar.** In step 09, each producer hardcodes its own `source` in `RawSignal`. In step 11, the sidecar stamps `source` automatically (it knows which service it's attached to via config) and producers drop the field. Wire format stays the same.
