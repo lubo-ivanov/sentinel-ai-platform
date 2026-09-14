@@ -47,14 +47,11 @@ public class OrderStateAnomalyRule implements ClassificationRule {
         if (from != null) payload.put("from", from);
         if (to != null) payload.put("to", to);
 
-        return Optional.of(new OperationalEvent(
-                UUID.randomUUID(),
-                signal.getId(),
-                signal.getSource(),
-                signal.getOccurredAt(),
+        return Optional.of(OperationalEvent.fromRule(
+                signal,
+                RULE_ID,
                 FailureType.ORDER_STATE_ANOMALY,
                 Severity.ERROR,
-                new OperationalEvent.Classification(OperationalEvent.Classification.Method.RULE, RULE_ID, 1.0),
                 payload)
         );
     }

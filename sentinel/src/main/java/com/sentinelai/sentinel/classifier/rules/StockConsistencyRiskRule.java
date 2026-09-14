@@ -29,25 +29,22 @@ public class StockConsistencyRiskRule implements ClassificationRule {
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
         if (isEmpty(signal.getMessage())
-        || !PATTERN.matcher(signal.getMessage()).find()) {
-            return  Optional.empty();
+                || !PATTERN.matcher(signal.getMessage()).find()) {
+            return Optional.empty();
         }
 
         String item = hintAsString(signal, "item");
         String expected = hintAsString(signal, "expected");
         String actual = hintAsString(signal, "actual");
         if (item == null || expected == null || actual == null) {
-            return  Optional.empty();
+            return Optional.empty();
         }
 
-        return Optional.of(new OperationalEvent(
-                UUID.randomUUID(),
-                signal.getId(),
-                signal.getSource(),
-                signal.getOccurredAt(),
+        return Optional.of(OperationalEvent.fromRule(
+                signal,
+                RULE_ID,
                 FailureType.STOCK_CONSISTENCY_RISK,
                 Severity.WARN,
-                new OperationalEvent.Classification(OperationalEvent.Classification.Method.RULE, RULE_ID, 1.0),
                 Map.of("item", item, "expected", expected, "actual", actual))
         );
     }

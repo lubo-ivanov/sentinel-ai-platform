@@ -37,17 +37,14 @@ public class StockReservationTimeoutRule implements ClassificationRule {
         String warehouse = hintAsString(signal, "warehouse");
 
         if (item == null || warehouse == null) {
-            return  Optional.empty();
+            return Optional.empty();
         }
 
-        return Optional.of(new OperationalEvent(
-                UUID.randomUUID(),
-                signal.getId(),
-                signal.getSource(),
-                signal.getOccurredAt(),
+        return Optional.of(OperationalEvent.fromRule(
+                signal,
+                RULE_ID,
                 FailureType.STOCK_RESERVATION_TIMEOUT,
                 Severity.ERROR,
-                new OperationalEvent.Classification(OperationalEvent.Classification.Method.RULE, RULE_ID, 1.0),
                 Map.of("item", item, "warehouse", warehouse))
         );
     }

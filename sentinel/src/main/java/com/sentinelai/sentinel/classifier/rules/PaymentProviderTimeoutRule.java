@@ -34,19 +34,16 @@ public class PaymentProviderTimeoutRule implements ClassificationRule {
 
         String provider = hint(signal, "provider");
         if (provider == null) {
-            return  Optional.empty();
+            return Optional.empty();
         }
 
-       return Optional.of(new OperationalEvent(
-                UUID.randomUUID(),
-                signal.getId(),
-                signal.getSource(),
-                signal.getOccurredAt(),
+        return Optional.of(OperationalEvent.fromRule(
+                signal,
+                RULE_ID,
                 FailureType.PAYMENT_PROVIDER_TIMEOUT,
                 Severity.ERROR,
-                new OperationalEvent.Classification(OperationalEvent.Classification.Method.RULE, RULE_ID, 1.0),
                 Map.of("provider", provider)
-       ));
+        ));
     }
 
     private static String hint(RawSignalEntity signal, String key) {

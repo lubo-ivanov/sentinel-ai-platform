@@ -35,18 +35,14 @@ public class CheckoutFlowDegradationRule implements ClassificationRule {
 
         String service = hint(signal, "service");
         if (service == null) {
-            return  Optional.empty();
+            return Optional.empty();
         }
         String durationMs = hint(signal, "duration_ms");
-        return Optional.of(
-                new OperationalEvent(
-                        UUID.randomUUID(),
-                        signal.getId(),
-                        signal.getSource(),
-                        signal.getOccurredAt(),
+        return Optional.of(OperationalEvent.fromRule(
+                        signal,
+                        RULE_ID,
                         FailureType.CHECKOUT_FLOW_DEGRADATION,
                         Severity.WARN,
-                        new OperationalEvent.Classification(OperationalEvent.Classification.Method.RULE, RULE_ID, 1.0),
                         durationMs != null
                                 ? Map.of("service", service, "duration_ms", durationMs)
                                 : Map.of("service", service)
