@@ -26,11 +26,17 @@ class SignalControllerTest {
     private static final String SOURCE = "payment-service";
     private static final RawSignal FULL = new RawSignal(
             "req-abc123",
+            "payment-service",
             Instant.parse("2026-07-17T12:34:56Z"),
             "stripe timeout",
             Map.of("provider", "stripe")
     );
-    private static final RawSignal MINIMAL = new RawSignal(null, null, "stripe timeout", null);
+    private static final RawSignal MINIMAL = new RawSignal(
+            null,
+            "payment-service",
+            null,
+            "stripe timeout",
+            null);
 
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
