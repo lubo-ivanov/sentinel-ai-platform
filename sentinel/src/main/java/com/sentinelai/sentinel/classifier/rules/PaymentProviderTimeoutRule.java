@@ -1,6 +1,5 @@
 package com.sentinelai.sentinel.classifier.rules;
 
-import com.sentinelai.sentinel.classifier.ClassificationRule;
 import com.sentinelai.sentinel.classifier.FailureType;
 import com.sentinelai.sentinel.classifier.OperationalEvent;
 import com.sentinelai.sentinel.classifier.Severity;
@@ -8,31 +7,25 @@ import com.sentinelai.sentinel.domain.RawSignalEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static io.micrometer.common.util.StringUtils.isEmpty;
-
 @Component
-public class PaymentProviderTimeoutRule implements ClassificationRule {
+public class PaymentProviderTimeoutRule extends AbstractClassificationRule {
     private static final String RULE_ID = "payment.provider-timeout.v1";
     private static final Pattern TIMEOUT_PATTERN = Pattern.compile("(?i)\\btimeout\\b");
+    private static final String KEY_PROVIDER = "provider";
 
-    @Override
-    public String ruleId() {
-        return RULE_ID;
+    public PaymentProviderTimeoutRule() {
+        super(RULE_ID);
     }
+
 
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if (isEmpty(signal.getMessage())
-                || !TIMEOUT_PATTERN.matcher(signal.getMessage()).find()) {
-            return Optional.empty();
-        }
+        if(!matchesPatterns(signal, TIMEOUT_PATTERN)) return  Optional.empty();
 
-        String provider = hint(signal, "provider");
+        String provider = hintAsString(signal, KEY_PROVIDER);
         if (provider == null) {
             return Optional.empty();
         }
@@ -42,13 +35,7 @@ public class PaymentProviderTimeoutRule implements ClassificationRule {
                 RULE_ID,
                 FailureType.PAYMENT_PROVIDER_TIMEOUT,
                 Severity.ERROR,
-                Map.of("provider", provider)
+                Map.of(KEY_PROVIDER, provider)
         ));
-    }
-
-    private static String hint(RawSignalEntity signal, String key) {
-        Map<String, Object> hints = signal.getHints();
-        if (hints == null) return null;
-        return Objects.toString(hints.get(key), null);
     }
 }

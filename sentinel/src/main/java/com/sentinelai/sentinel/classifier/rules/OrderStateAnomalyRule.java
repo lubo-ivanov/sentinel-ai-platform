@@ -1,6 +1,5 @@
 package com.sentinelai.sentinel.classifier.rules;
 
-import com.sentinelai.sentinel.classifier.ClassificationRule;
 import com.sentinelai.sentinel.classifier.FailureType;
 import com.sentinelai.sentinel.classifier.OperationalEvent;
 import com.sentinelai.sentinel.classifier.Severity;
@@ -9,43 +8,38 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static io.micrometer.common.util.StringUtils.isEmpty;
-
 @Component
-public class OrderStateAnomalyRule implements ClassificationRule {
+public class OrderStateAnomalyRule extends AbstractClassificationRule {
 
     private static final String RULE_ID = "order.state-anomaly.v1";
     private static final Pattern ORDER_STATE_PATTERN = Pattern.compile("(?i)\\border state\\b");
+    private static final String KEY_ORDER_ID = "orderId";
+    private static final String KEY_FROM = "from";
+    private static final String KEY_TO = "to";
 
-    @Override
-    public String ruleId() {
-        return RULE_ID;
+    public OrderStateAnomalyRule() {
+        super(RULE_ID);
     }
 
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if(isEmpty(signal.getMessage())
-        || !ORDER_STATE_PATTERN.matcher(signal.getMessage()).find()) {
-            return  Optional.empty();
-        }
+        if(!matchesPatterns(signal, ORDER_STATE_PATTERN)) return  Optional.empty();
 
-        String orderId = hintAsString(signal, "orderId");
+        String orderId = hintAsString(signal, KEY_ORDER_ID);
         if (orderId == null) {
             return Optional.empty();
         }
 
-        String from = hintAsString(signal, "from");
-        String to = hintAsString(signal, "to");
+        String from = hintAsString(signal, KEY_FROM);
+        String to = hintAsString(signal, KEY_TO);
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("orderId", orderId);
-        if (from != null) payload.put("from", from);
-        if (to != null) payload.put("to", to);
+        payload.put(KEY_ORDER_ID, orderId);
+        if (from != null) payload.put(KEY_FROM, from);
+        if (to != null) payload.put(KEY_TO, to);
 
         return Optional.of(OperationalEvent.fromRule(
                 signal,
@@ -54,13 +48,5 @@ public class OrderStateAnomalyRule implements ClassificationRule {
                 Severity.ERROR,
                 payload)
         );
-    }
-
-    private static String hintAsString(RawSignalEntity signal, String key) {
-        Map<String, Object> hints = signal.getHints();
-        if (hints == null) {
-            return null;
-        }
-        return Objects.toString(hints.get(key), null);
     }
 }

@@ -1,6 +1,5 @@
 package com.sentinelai.sentinel.classifier.rules;
 
-import com.sentinelai.sentinel.classifier.ClassificationRule;
 import com.sentinelai.sentinel.classifier.FailureType;
 import com.sentinelai.sentinel.classifier.OperationalEvent;
 import com.sentinelai.sentinel.classifier.Severity;
@@ -8,33 +7,26 @@ import com.sentinelai.sentinel.domain.RawSignalEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-
 @Component
-public class StockReservationTimeoutRule implements ClassificationRule {
+public class StockReservationTimeoutRule extends AbstractClassificationRule {
 
     private static final String RULE_ID = "inventory.stock-reservation-timeout.v1";
     private static final Pattern PATTERN = Pattern.compile("(?i)\\bstock\\s+reservation\\s+timeout\\b");
+    private static final String KEY_ITEM = "item";
+    private static final String KEY_WAREHOUSE = "warehouse";
 
-    @Override
-    public String ruleId() {
-        return RULE_ID;
+    public StockReservationTimeoutRule() {
+        super(RULE_ID);
     }
-
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if (isEmpty(signal.getMessage())
-                || !PATTERN.matcher(signal.getMessage()).find()) {
-            return Optional.empty();
-        }
+        if(!matchesPatterns(signal, PATTERN)) return  Optional.empty();
 
-        String item = hintAsString(signal, "item");
-        String warehouse = hintAsString(signal, "warehouse");
+        String item = hintAsString(signal, KEY_ITEM);
+        String warehouse = hintAsString(signal, KEY_WAREHOUSE);
 
         if (item == null || warehouse == null) {
             return Optional.empty();
@@ -45,13 +37,7 @@ public class StockReservationTimeoutRule implements ClassificationRule {
                 RULE_ID,
                 FailureType.STOCK_RESERVATION_TIMEOUT,
                 Severity.ERROR,
-                Map.of("item", item, "warehouse", warehouse))
+                Map.of(KEY_ITEM, item, KEY_WAREHOUSE, warehouse))
         );
-    }
-
-    private static String hintAsString(RawSignalEntity signal, String key) {
-        Map<String, Object> hints = signal.getHints();
-        if (hints == null) return null;
-        return Objects.toString(hints.get(key), null);
     }
 }
