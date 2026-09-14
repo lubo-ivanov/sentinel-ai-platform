@@ -10,11 +10,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ClassifierService {
 
-    private final RuleEngine ruleEngine;
+    private final Classifier classifier;
     private final OperationalEventRepository operationalEventRepository;
 
     public OperationalEvent classifyAndStore(RawSignalEntity signal) {
-        OperationalEvent event = ruleEngine.classify(signal);
+        OperationalEvent event = classifier.classify(signal);
         operationalEventRepository.save(toEntity(event));
         return event;
     }

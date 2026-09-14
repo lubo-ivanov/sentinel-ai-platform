@@ -4,13 +4,11 @@ import com.sentinelai.sentinel.classifier.FailureType;
 import com.sentinelai.sentinel.classifier.OperationalEvent;
 import com.sentinelai.sentinel.classifier.Severity;
 import com.sentinelai.sentinel.domain.RawSignalEntity;
-import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-@Component
 public class StockConsistencyRiskRule extends AbstractClassificationRule {
 
     private static final String RULE_ID = "inventory.stock-consistency-risk.v1";

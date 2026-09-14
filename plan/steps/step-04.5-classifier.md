@@ -13,7 +13,7 @@ LLM fallback is out of scope for this step — it comes in [step 12.5](step-12.5
 - `OperationalEvent` internal type (POJO/record inside Sentinel). Fields: `id`, `sourceSignalId`, `source`, `timestamp`, `type`, `severity`, `classification` (nested: `method`, `ruleId`, `confidence`), `payload` (extracted structured data).
 - `FailureType` enum with the initial known types (e.g., `PAYMENT_PROVIDER_TIMEOUT`, `PAYMENT_DECLINED`, `PAYMENT_RETRY_EXHAUSTED`, `UNCLASSIFIED`). Expand as producers get richer.
 - A `ClassificationRule` interface — given a `RawSignal`, either return an `OperationalEvent` or return empty (rule didn't match).
-- A `RuleEngine` that runs the catalog of rules against each signal, first-match-wins, with logged tie-breaks if multiple match.
+- A `RuleBasedClassifier` that runs the catalog of rules against each signal, first-match-wins, with logged tie-breaks if multiple match.
 - Concrete rule implementations for the payment-service signals (regex over `message`, checks against `hints`).
 - `ClassifierService` that: reads a `RawSignal`, runs the engine, produces an `OperationalEvent`, persists it to a new `operational_events` table. Signals with no match produce an `UNCLASSIFIED` event still stored (nothing dropped).
 - Flyway migration `V3__create_operational_events.sql` — table linked to `raw_signals` by `source_signal_id`.

@@ -31,7 +31,7 @@ class ClassifierServiceTest {
 
     private final OperationalEventRepository repository = mock(OperationalEventRepository.class);
     private final ClassifierService service = new ClassifierService(
-            new RuleEngine(List.of(new PaymentProviderTimeoutRule()), new SimpleMeterRegistry()),
+            new RuleBasedClassifier(List.of(new PaymentProviderTimeoutRule()), new SimpleMeterRegistry()),
             repository
     );
 

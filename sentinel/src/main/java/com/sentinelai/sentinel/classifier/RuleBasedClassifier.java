@@ -13,20 +13,20 @@ import java.util.UUID;
 
 @Component
 @Slf4j
-public class RuleEngine {
+public class RuleBasedClassifier implements Classifier {
 
     private final List<ClassificationRule> rules;
     private final MeterRegistry meterRegistry;
     private final Timer classifyTimer;
 
-    public RuleEngine(List<ClassificationRule> rules, MeterRegistry meterRegistry) {
+    public RuleBasedClassifier(List<ClassificationRule> rules, MeterRegistry meterRegistry) {
         this.rules = rules;
         this.meterRegistry = meterRegistry;
         this.classifyTimer = Timer.builder("classifier.duration")
                 .description("Time to classify a single signal")
                 .publishPercentiles(0.5, 0.95, 0.99)
                 .register(meterRegistry);
-        log.info("RulesEngine initialised with {} rules: {}",
+        log.info("RuleBasedClassifier initialised with {} rules: {}",
                 rules.size(),
                 rules.stream().map((ClassificationRule::ruleId)).toList()
         );
@@ -36,7 +36,7 @@ public class RuleEngine {
         return classifyTimer.record(() -> doClassify(signal));
     }
 
-    public OperationalEvent doClassify(RawSignalEntity signal) {
+    private OperationalEvent doClassify(RawSignalEntity signal) {
         for (ClassificationRule rule : rules) {
             Optional<OperationalEvent> match = rule.apply(signal);
             if (match.isPresent()) {

@@ -29,7 +29,7 @@ Candidate decorators (add only what real duplication justifies):
 - `AuditRule(delegate)` — records every attempt (matched or not) for offline analysis. Feeds step 12.5's LLM fallback.
 - `LoggingRule(delegate)` — structured log line per attempt.
 
-Wiring lives in a `@Configuration` — `RuleEngine` doesn't know or care:
+Wiring lives in a `@Configuration` — `RuleBasedClassifier` doesn't know or care:
 ```java
 @Bean
 ClassificationRule paymentTimeoutRule() {
@@ -40,11 +40,11 @@ ClassificationRule paymentTimeoutRule() {
 ```
 
 ### Strategy pattern for classifier types
-Extract a `Classifier` interface with a `classify(RawSignalEntity) → OperationalEvent` method. Current `RuleEngine` becomes `RuleBasedClassifier` (implements `Classifier`). This unlocks:
+Extract a `Classifier` interface with a `classify(RawSignalEntity) → OperationalEvent` method. Current `RuleBasedClassifier` becomes `RuleBasedClassifier` (implements `Classifier`). This unlocks:
 - `LlmClassifier` (step 12.5) implements the same interface.
 - `HybridClassifier` — rules first, LLM on miss — as a composition.
 
-Wiring stays trivial; `ClassifierService` depends on `Classifier`, not on `RuleEngine`.
+Wiring stays trivial; `ClassifierService` depends on `Classifier`, not on `RuleBasedClassifier`.
 
 ## What to learn
 
