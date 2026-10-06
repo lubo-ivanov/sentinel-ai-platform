@@ -42,3 +42,6 @@ management:
       exposure:
         include: health,metrics
 
+sentinel:
+  dedup:
+    ttl: 24h

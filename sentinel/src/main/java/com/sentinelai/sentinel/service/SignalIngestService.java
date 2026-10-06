@@ -11,6 +11,7 @@ import com.sentinelai.sentinel.domain.RawSignalEntity;
 import com.sentinelai.sentinel.repository.OperationalEventRepository;
 import com.sentinelai.sentinel.repository.RawSignalRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,16 +29,27 @@ public class SignalIngestService {
     private final ClassifierService classifierService;
     private final OperationalEventRepository operationalEventRepository;
     private final AnomalyDetectionService anomalyDetectionService;
+    private final DeduplicationService deduplicationService;
 
     public void ingest(String source, RawSignal signal) {
-        RawSignalEntity saved = repository.save(new RawSignalEntity(
-                UUID.randomUUID(),
-                signal.id(),
-                source,
-                Optional.ofNullable(signal.occurredAt()).orElseGet(Instant::now),
-                signal.message(),
-                signal.hints()
-        ));
+
+        if (!deduplicationService.isNew(signal.id(), source)) {
+            return;
+        }
+        RawSignalEntity saved;
+        try {
+            saved = repository.save(new RawSignalEntity(
+                    UUID.randomUUID(),
+                    signal.id(),
+                    source,
+                    Optional.ofNullable(signal.occurredAt()).orElseGet(Instant::now),
+                    signal.message(),
+                    signal.hints()
+            ));
+        } catch (DataIntegrityViolationException e) {
+            // Another safeguard in case we reach duplicate Ids anyway
+            return;
+        }
 
         OperationalEvent event = classifierService.classifyAndStore(saved);
         anomalyDetectionService.evaluate(event);

@@ -9,17 +9,13 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 
 @Component
 @Slf4j
 public class SignalEmitter {
 
-    private static final String ID_PREFIX = "pay-";
-
     private final SignalPublisher signalPublisher;
-    private final AtomicLong counter = new AtomicLong(0);
-
     private final String serviceName;
 
     public SignalEmitter(SignalPublisher signalPublisher,
@@ -32,7 +28,7 @@ public class SignalEmitter {
     @Scheduled(fixedDelayString = "${payment.emit-interval-ms}")
     public void emit() {
         RawSignal payload = new RawSignal(
-                ID_PREFIX + counter.incrementAndGet(),
+                UUID.randomUUID().toString(),
                 serviceName,
                 Instant.now().toString(),
                 "stripe timeout after 5000ms",
