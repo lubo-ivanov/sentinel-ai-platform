@@ -1,10 +1,12 @@
 package com.sentinelai.sidecar.buffer;
 
+import com.sentinelai.sidecar.SidecarProperties;
 import com.sentinelai.sidecar.health.SidecarState;
 import com.sentinelai.sidecar.health.StateManager;
 import com.sentinelai.sidecar.kafka.SignalPublisher;
 import com.sentinelai.sidecar.signal.RawSignal;
 import com.sentinelai.sidecar.spill.SpillManager;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,8 @@ public class ForwardRunner {
     private final SignalPublisher signalPublisher;
     private final StateManager stateManager;
     private final SpillManager spillManager;
+    private final MeterRegistry meterRegistry;
+    private final SidecarProperties properties;
 
     private volatile boolean running = true;
     private Thread thread;
@@ -36,6 +40,7 @@ public class ForwardRunner {
                 signal = eventQueue.getQueue().take();
                 signalPublisher.publish(signal);
                 stateManager.markSuccess();
+                meterRegistry.counter("events.published", "source", properties.source()).increment();
                 if (stateManager.current() == SidecarState.RECOVERY) {
                     spillManager.drain().forEach(eventQueue::offer);
                 }

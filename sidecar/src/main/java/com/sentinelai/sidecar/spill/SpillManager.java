@@ -3,6 +3,7 @@ package com.sentinelai.sidecar.spill;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sentinelai.sidecar.SidecarProperties;
 import com.sentinelai.sidecar.signal.RawSignal;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class SpillManager {
 
     private final ObjectMapper objectMapper;
     private final SidecarProperties properties;
+    private final MeterRegistry meterRegistry;
     private Path spillFile;
 
     @PostConstruct
@@ -38,9 +40,12 @@ public class SpillManager {
         try {
             if(Files.exists(spillFile) && Files.size(spillFile) >= properties.maxSpillBytes()) {
                 log.warn("Disc cap reached - dropping signal id={}", signal.id());
+                meterRegistry.counter("events.dropped", "source", properties.source()).increment();
+                return;
             }
             String line = objectMapper.writeValueAsString(signal);
             Files.writeString(spillFile, line + "\n", StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+            meterRegistry.counter("events.spilled", "source", properties.source()).increment();
         } catch (IOException e) {
             log.error("Failed to spill signal id={}", signal.id(), e);
         }
