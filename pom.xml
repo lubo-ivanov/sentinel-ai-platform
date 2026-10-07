@@ -24,6 +24,7 @@
         <module>payment-service</module>
         <module>order-service</module>
         <module>inventory-service</module>
+        <module>sidecar</module>
     </modules>
 
     <dependencyManagement>

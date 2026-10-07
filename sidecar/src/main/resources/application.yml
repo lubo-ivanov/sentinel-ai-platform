@@ -1,0 +1,13 @@
+server:
+  port: ${SIDECAR_PORT:9090}
+
+sidecar:
+  source: ${SIDECAR_SOURCE:unknown}
+  signals-topic: ${SIDECAR_SIGNALS_TOPIC:signals.raw}
+  queue-capacity: ${SIDECAR_QUEUE_CAPACITY:10000}
+
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  producer:
+    acks: all
+    enable-idempotence: true

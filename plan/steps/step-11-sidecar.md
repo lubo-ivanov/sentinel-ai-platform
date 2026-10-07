@@ -6,47 +6,103 @@ Parent: [PLAN.md](../PLAN.md) | Design: [sidecar.md](../sidecar.md)
 
 Insert a sidecar in front of each producer. Producers POST events to localhost; sidecar handles Kafka publishing, batching, retry, and disk spillover when Kafka is unreachable.
 
-## What to build
+## Sub-steps
 
-- New module `sidecar/` — Spring Boot app (or plain Java; Spring is fine for consistency).
-- Local HTTP endpoint `POST /events` accepting one event or a batch.
-- In-memory bounded queue (e.g., `ArrayBlockingQueue` of 10k events).
-- Background publisher thread (or virtual thread) that drains the queue to Kafka in batches.
-- State machine — `NORMAL`, `DEGRADED`, `DOWN`, `RECOVERY` — with explicit transitions.
-- Disk spillover — append-only files in a configured directory, rotated by size. New files when a roll threshold hits.
-- On Kafka recovery: drain disk spillover before resuming in-memory publishing.
-- `/health` endpoint reflecting Kafka reachability, buffer depth, disk-spilled count.
-- **`POST /admin/trigger-burst` endpoint** — re-publishes the last buffered signal N times (N ≥ threshold) immediately onto Kafka. Sidecar already holds the signal in its buffer, so no extra state needed. Used to demo anomaly detection on demand without waiting for the scheduler.
-- Producer services updated to POST to `http://sidecar:<port>/events` instead of directly to Kafka.
-- Each producer paired with its own sidecar instance in `docker-compose.yml`.
-- **`source` field ownership moves to sidecar.** In step 09, each producer hardcodes its own `source` in `RawSignal`. In step 11, the sidecar stamps `source` automatically (it knows which service it's attached to via config) and producers drop the field. Wire format stays the same.
+### 11a — Module scaffold ✅
+- New `sidecar/` Maven module added to root `pom.xml`
+- `SidecarApplication` with `@SpringBootApplication` + `@ConfigurationPropertiesScan`
+- `POST /events` endpoint in `EventController` — accepts `RawSignal`, returns `202 Accepted`
+- `RawSignal` record in `signal/` package — **no `source` field** (sidecar stamps it from config)
+- `application.yml` with env-var-backed defaults for all config
+
+### 11b — In-memory queue + Kafka publisher (in progress)
+- `SidecarProperties` — `@ConfigurationProperties(prefix="sidecar")` record: `source`, `signalsTopic`, `queueCapacity`
+- `kafka/KafkaProperties` — `@ConfigurationProperties(prefix="kafka")` record: `bootstrapServers`, `producer{acks, enableIdempotence}`
+- `kafka/KafkaConfig` — `@Configuration`, builds `producerProperties()` from `KafkaProperties`
+- `kafka/SignalPublisher` — `@Component`, creates `KafkaProducer`, `publish(RawSignal)`, `@PreDestroy close()`
+- `EventQueue` — wraps `ArrayBlockingQueue<RawSignal>`, `offer()` returns false + logs warn when full
+- Background publisher thread drains queue to Kafka
+- `EventController.receive()` wired to `EventQueue.offer()`
+
+### 11c — State machine + /health
+- States: `NORMAL`, `DEGRADED`, `DOWN`, `RECOVERY`
+- `SidecarState` enum + `StateManager` component with explicit transition methods
+- `/health` endpoint returns state + buffer depth + disk spill count
+
+### 11d — Disk spillover
+- On Kafka failure → spill to append-only files (one JSON per line)
+- On recovery → drain disk first (in arrival order), then resume in-memory
+- Configurable spill directory (`sidecar.spill-dir`) and max disk cap
+- `events_dropped_total` counter when disk cap also exceeded
+
+### 11e — Source ownership + producers switch to HTTP
+- Producers drop `source` field from `RawSignal` and their entire Kafka infra (`kafka/` package deleted from each producer)
+- Producers gain a simple HTTP client (`RestClient`) that POSTs to `${SIDECAR_URL}/events`
+- `SignalEmitter` in each producer calls HTTP client instead of `SignalPublisher`
+
+### 11f — Compose wiring
+- Root `Dockerfile` gets `sidecar-build` + `sidecar-runtime` targets
+- Three sidecar instances in `compose.yml`:
+  - `payment-sidecar` (port 9082, `SIDECAR_SOURCE=payment-service`)
+  - `order-sidecar` (port 9083, `SIDECAR_SOURCE=order-service`)
+  - `inventory-sidecar` (port 9084, `SIDECAR_SOURCE=inventory-service`)
+- Each producer depends on its sidecar (`condition: service_healthy`)
+- E2E verified: all producers → sidecars → Kafka → Sentinel
+
+### 11g — Metrics
+- `events.received` counter (tagged by source)
+- `events.published` counter
+- `buffer.depth` gauge
+- `events.spilled` counter
+- `events.dropped` counter
+
+## Architecture decisions
+
+- **One module, three instances** — same Docker image, different config per instance via env vars in compose. No per-producer Dockerfiles needed.
+- **`@ConfigurationPropertiesScan` on `SidecarApplication`** — registers all `@ConfigurationProperties` classes in the package tree automatically. No need for `@EnableConfigurationProperties` anywhere. This is cleaner than `@EnableConfigurationProperties` on `KafkaConfig` because `SidecarProperties` has no single owner class.
+- **`RawSignal` has no `source` field** — sidecar stamps `source` from `sidecar.source` config, used as the Kafka partition key. Producers become truly source-agnostic.
+- **`signal/` sub-package** — `RawSignal` lives in `com.sentinelai.sidecar.signal`, matching the producer pattern.
+- **No Kubernetes** — explicitly out of scope per `PLAN.md`. Compose is the deployment target. Sidecar injection patterns (like Istio) require K8s — not applicable here.
+- **Queue full → drop, not block** — `ArrayBlockingQueue.offer()` (non-blocking). Producer's `POST /events` always returns quickly. Drops logged + counted. Disk spillover handles sustained Kafka outages before queue fills.
+- **At-least-once delivery** — sidecar may replay on retry/recovery. Step 10 idempotency (Redis SET NX + DB UNIQUE constraint) makes this safe.
+
+## application.yml structure
+
+```yaml
+server:
+  port: ${SIDECAR_PORT:9090}
+
+sidecar:
+  source: ${SIDECAR_SOURCE:unknown}
+  signals-topic: ${SIDECAR_SIGNALS_TOPIC:signals.raw}
+  queue-capacity: ${SIDECAR_QUEUE_CAPACITY:10000}
+
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  producer:
+    acks: all
+    enable-idempotence: true
+```
 
 ## What to learn
 
 - The producer-sidecar contract: producers don't know Kafka exists. Their failure mode is "sidecar unreachable" only.
-- Bounded queue + producer-side backpressure decisions: when the queue is full, what happens? Block? Drop? Spill immediately? Pick deliberately.
-- File I/O for append-only logs — `FileChannel` with `force()` for durability, or simpler `BufferedWriter` if performance allows.
-- State-machine modeling — explicit states beat implicit booleans every time.
-
-## Things to think about
-
-- **Producer-to-sidecar channel.** HTTP localhost is fine. Could be Unix sockets for marginal efficiency; not worth it.
-- **Backpressure on the producer.** If the sidecar's POST endpoint is slow (queue full), the producer's call slows. That's fine for a simulator; in production a real producer would need timeout handling.
-- **Disk file format.** One JSON event per line. Simple to debug, replay, and recover.
-- **Recovery ordering.** Disk-spilled events drain in arrival order before any in-memory events. Don't mix them — that's a footgun.
-- **Java vs Go for the sidecar.** See [sidecar.md](../sidecar.md). Default Java; revisit if energy permits.
+- Bounded queue + backpressure: `offer()` vs `put()` — non-blocking drop beats blocking producer.
+- File I/O for append-only logs — `BufferedWriter` with `flush()` per line for durability.
+- State-machine modeling — explicit states beat implicit booleans.
+- `@ConfigurationPropertiesScan` vs `@EnableConfigurationProperties` — scan on main class for global registration; explicit annotation when a config class tightly owns its properties.
 
 ## Done when
 
 - Three producers each have their own sidecar.
-- Killing Kafka via `docker-compose stop kafka`:
+- Killing Kafka via `docker compose stop kafka`:
   - Producers continue posting to sidecars successfully.
   - Sidecar metrics show buffer depth climbing, then disk spillover.
   - No events lost (verified by counting before kill, after recovery).
 - Restarting Kafka:
   - Sidecars drain disk back to Kafka.
   - Sentinel sees the burst arrive in order.
-  - Idempotency from [step 10](step-10-idempotency.md) prevents any reprocessing artifacts from retries.
+  - Idempotency from step 10 prevents any reprocessing artifacts.
 - Demo recording-ready: this is the core wow-moment.
 
 ## Things to skip
@@ -54,7 +110,4 @@ Insert a sidecar in front of each producer. Producers POST events to localhost; 
 - Multi-destination routing. Kafka only.
 - Compression. Plain JSON over the wire is fine.
 - Adaptive batching. Fixed batch size + flush interval.
-
-## Look ahead
-
-This step is the structural centerpiece of the system. Once sidecars work, the rest is enrichment, UI, polish. Spend time getting the failure-recovery transitions right because the demo lives there.
+- Kubernetes sidecar injection patterns. Out of scope.
