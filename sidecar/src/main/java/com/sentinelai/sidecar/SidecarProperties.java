@@ -6,5 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record SidecarProperties(
    String source,
    String signalsTopic,
-   int queueCapacity
+   int queueCapacity,
+   String spillDir,
+   int maxSpillBytes
 ) {}

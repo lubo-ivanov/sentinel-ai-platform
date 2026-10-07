@@ -1,8 +1,10 @@
 package com.sentinelai.sidecar.buffer;
 
+import com.sentinelai.sidecar.health.SidecarState;
 import com.sentinelai.sidecar.health.StateManager;
 import com.sentinelai.sidecar.kafka.SignalPublisher;
 import com.sentinelai.sidecar.signal.RawSignal;
+import com.sentinelai.sidecar.spill.SpillManager;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ public class ForwardRunner {
     private final EventQueue eventQueue;
     private final SignalPublisher signalPublisher;
     private final StateManager stateManager;
+    private final SpillManager spillManager;
 
     private volatile boolean running = true;
     private Thread thread;
@@ -28,16 +31,23 @@ public class ForwardRunner {
 
     private void run() {
         while (running) {
+            RawSignal signal = null;
             try {
-                RawSignal signal = eventQueue.getQueue().take();
+                signal = eventQueue.getQueue().take();
                 signalPublisher.publish(signal);
                 stateManager.markSuccess();
+                if (stateManager.current() == SidecarState.RECOVERY) {
+                    spillManager.drain().forEach(eventQueue::offer);
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
                 log.error("Failed to publish signal", e);
                 stateManager.markFailure();
+                if (signal != null) {
+                    spillManager.spill(signal);
+                }
             }
         }
         log.info("Forwarder stopped");
