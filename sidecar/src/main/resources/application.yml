@@ -2,7 +2,7 @@ server:
   port: ${SIDECAR_PORT:9090}
 
 sidecar:
-  source: ${SIDECAR_SOURCE:unknown}
+  source: ${HOSTNAME:unknown}
   signals-topic: ${SIDECAR_SIGNALS_TOPIC:signals.raw}
   queue-capacity: ${SIDECAR_QUEUE_CAPACITY:10000}
   spill-dir: ${SIDECAR_SPILL_DIR:/tmp/sidecar-spill}

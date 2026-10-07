@@ -5,14 +5,8 @@ spring:
   application:
     name: payment-service
 
-kafka:
-  bootstrap-servers: kafka:9092
-  producer:
-    acks: all
-    enable-idempotence: true
-
-sentinel:
-  signals-topic: signals.raw
+sidecar:
+  url: ${SIDECAR_URL:http://localhost:9090}
 
 payment:
   emit-interval-ms: 5000

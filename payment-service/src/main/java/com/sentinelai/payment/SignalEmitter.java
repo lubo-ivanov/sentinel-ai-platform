@@ -1,9 +1,7 @@
 package com.sentinelai.payment;
 
-import com.sentinelai.payment.kafka.SignalPublisher;
 import com.sentinelai.payment.signal.RawSignal;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -15,13 +13,10 @@ import java.util.UUID;
 @Slf4j
 public class SignalEmitter {
 
-    private final SignalPublisher signalPublisher;
-    private final String serviceName;
+    private final SidecarClient sidecarClient;
 
-    public SignalEmitter(SignalPublisher signalPublisher,
-                         @Value("${spring.application.name}") String serviceName) {
-        this.signalPublisher = signalPublisher;
-        this.serviceName = serviceName;
+    public SignalEmitter(SidecarClient sidecarClient) {
+        this.sidecarClient = sidecarClient;
     }
 
 
@@ -29,13 +24,12 @@ public class SignalEmitter {
     public void emit() {
         RawSignal payload = new RawSignal(
                 UUID.randomUUID().toString(),
-                serviceName,
                 Instant.now().toString(),
                 "stripe timeout after 5000ms",
                 Map.of("provider", "stripe", "amount", 42.00, "currency", "USD")
         );
 
-        signalPublisher.publish(payload);
+        sidecarClient.send(payload);
         log.info("Emitted signal {}", payload.id());
     }
 }

@@ -1,9 +1,7 @@
 package com.sentinelai.inventory;
 
-import com.sentinelai.inventory.kafka.SignalPublisher;
 import com.sentinelai.inventory.signal.RawSignal;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -16,14 +14,11 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class SignalEmitter {
 
-    private final SignalPublisher signalPublisher;
-    private final String serviceName;
+    private final SidecarClient sidecarClient;
     private final AtomicLong counter = new AtomicLong(0);
 
-    public SignalEmitter(SignalPublisher signalPublisher,
-                         @Value("${spring.application.name}") String serviceName) {
-        this.signalPublisher = signalPublisher;
-        this.serviceName = serviceName;
+    public SignalEmitter(SidecarClient sidecarClient) {
+        this.sidecarClient = sidecarClient;
     }
 
     @Scheduled(fixedDelayString = "${inventory.emit-interval-ms}")
@@ -33,18 +28,16 @@ public class SignalEmitter {
         RawSignal payload = count % 2 == 0
                 ? new RawSignal(
                 signalId,
-                serviceName,
                 Instant.now().toString(),
                 "stock reservation timeout",
                 Map.of("item", "SKU-123", "warehouse", "EU-WEST"))
                 : new RawSignal(
                 signalId,
-                serviceName,
                 Instant.now().toString(),
                 "stock count mismatch",
                 Map.of("item", "SKU-456", "expected", 100, "actual", 73));
 
-        signalPublisher.publish(payload);
+        sidecarClient.send(payload);
         log.info("Emitted signal {}", payload.id());
     }
 }

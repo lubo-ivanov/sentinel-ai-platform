@@ -1,6 +1,5 @@
 package com.sentinelai.order;
 
-import com.sentinelai.order.kafka.SignalPublisher;
 import com.sentinelai.order.signal.RawSignal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,14 +23,11 @@ public class SignalEmitter {
             .toList();
     private final AtomicLong counter = new AtomicLong(0);
 
-    private final SignalPublisher signalPublisher;
-    private final String serviceName;
+    private final SidecarClient sidecarClient;
 
 
-    public SignalEmitter(SignalPublisher signalPublisher,
-                         @Value("${spring.application.name}") String serviceName) {
-        this.signalPublisher = signalPublisher;
-        this.serviceName = serviceName;
+    public SignalEmitter(SidecarClient sidecarClient) {
+        this.sidecarClient = sidecarClient;
     }
 
 
@@ -43,17 +39,16 @@ public class SignalEmitter {
         RawSignal payload = count % 2 == 0
                 ? new RawSignal(
                 signalId,
-                serviceName, Instant.now().toString(),
+                Instant.now().toString(),
                 "checkout flow slow",
                 Map.of("service", "checkout", "duration_ms", 8000))
                 : new RawSignal(
                 signalId,
-                serviceName,
                 Instant.now().toString(),
                 "unexpected order state transition",
                 Map.of("orderId", orderId, "from", "PENDING", "to", "FAILED"));
 
-        signalPublisher.publish(payload);
+        sidecarClient.send(payload);
         log.info("Emitted signal {}", payload.id());
     }
 }

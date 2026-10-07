@@ -18,7 +18,7 @@ class SignalEmitterTest {
     @BeforeEach
     void setUp() {
         publisher = mock(SignalPublisher.class);
-        emitter = new SignalEmitter(publisher ,"payment-service");
+        emitter = new SignalEmitter(publisher ,"payment-service", );
     }
 
     @Test
