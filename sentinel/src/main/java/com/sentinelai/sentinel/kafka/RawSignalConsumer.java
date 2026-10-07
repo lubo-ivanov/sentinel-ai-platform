@@ -36,7 +36,7 @@ public class RawSignalConsumer extends AbstractKafkaConsumer<RawSignal> {
 
     @Override
     protected void process(RawSignal signal, ConsumerRecord<String, String> raw) {
-        ingestService.ingest("payment-service", signal);
+        ingestService.ingest(raw.key(), signal);
         log.debug("Ingested signal id={} from offset={}", signal.id(), raw.offset());
     }
 

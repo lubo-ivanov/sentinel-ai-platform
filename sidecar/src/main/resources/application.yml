@@ -9,7 +9,7 @@ sidecar:
   max-spill-bytes: ${SIDECAR_MAX_SPILL_BYTES:104857600}
 
 kafka:
-  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
   producer:
     acks: all
     enable-idempotence: true

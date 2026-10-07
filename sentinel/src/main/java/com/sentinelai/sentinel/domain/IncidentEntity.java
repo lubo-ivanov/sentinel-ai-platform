@@ -49,7 +49,7 @@ public class IncidentEntity {
     private Instant firstSeen;
 
     @Setter
-    @Generated(event = INSERT)
+    @Generated(event = {INSERT, UPDATE})
     @Column(name = "last_seen", nullable = false)
     private Instant lastSeen;
 

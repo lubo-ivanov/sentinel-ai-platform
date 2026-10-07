@@ -7,6 +7,7 @@ COPY sentinel/pom.xml sentinel/pom.xml
 COPY payment-service/pom.xml payment-service/pom.xml
 COPY order-service/pom.xml order-service/pom.xml
 COPY inventory-service/pom.xml inventory-service/pom.xml
+COPY sidecar/pom.xml sidecar/pom.xml
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 
@@ -52,4 +53,15 @@ FROM runtime AS inventory-runtime
 WORKDIR /app
 COPY --from=inventory-build /app/inventory-service/target/*.jar app.jar
 EXPOSE 8084
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+
+# --- sidecar ---
+FROM base AS sidecar-build
+COPY sidecar sidecar
+RUN ./mvnw -pl sidecar -am -DskipTests package
+
+FROM runtime AS sidecar-runtime
+WORKDIR /app
+COPY --from=sidecar-build /app/sidecar/target/*.jar app.jar
+EXPOSE 9090
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
