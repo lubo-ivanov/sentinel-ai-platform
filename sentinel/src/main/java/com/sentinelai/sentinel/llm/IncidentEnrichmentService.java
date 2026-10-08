@@ -41,13 +41,13 @@ public class IncidentEnrichmentService {
         JSON response:
         """;
 
-    private final OllamaClient ollamaClient;
+    private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
 
     public Optional<AiEnrichment> enrich(IncidentEntity incident, Anomaly anomaly) {
         try {
             String prompt = buildPrompt(incident, anomaly);
-            String raw = ollamaClient.generate(prompt);
+            String raw = llmClient.generate(prompt);
             AiEnrichment enrichment = objectMapper.readValue(raw, AiEnrichment.class);
             return Optional.of(enrichment);
         } catch (Exception e) {

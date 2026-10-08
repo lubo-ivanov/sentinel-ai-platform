@@ -2,6 +2,7 @@ package com.sentinelai.sentinel.llm;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,8 +14,9 @@ import java.time.Duration;
 import java.util.Map;
 
 @Component
+@ConditionalOnProperty(name = "sentinel.llm.provider", havingValue = "ollama", matchIfMissing = true)
 @Slf4j
-public class OllamaClient {
+public class OllamaClient implements  LlmClient {
 
     private final RestClient restClient;
     private final String model;
@@ -33,6 +35,7 @@ public class OllamaClient {
         this.model = model;
     }
 
+    @Override
     public String generate(String prompt) {
         Map<String, Object> request = Map.of(
                 "model", model,

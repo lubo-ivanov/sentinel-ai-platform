@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 class IncidentEnrichmentServiceTest {
 
     @Mock
-    private OllamaClient ollamaClient;
+    private LlmClient llmClient;
 
     private IncidentEnrichmentService enrichmentService;
 
@@ -33,7 +33,7 @@ class IncidentEnrichmentServiceTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        enrichmentService = new IncidentEnrichmentService(ollamaClient, new ObjectMapper());
+        enrichmentService = new IncidentEnrichmentService(llmClient, new ObjectMapper());
         capturedResponse = new String(
                 getClass().getClassLoader().getResourceAsStream("ollama-response.json").readAllBytes()
         );
@@ -52,7 +52,7 @@ class IncidentEnrichmentServiceTest {
                 5L,
                 Severity.ERROR
         );
-        when(ollamaClient.generate(anyString())).thenReturn(capturedResponse);
+        when(llmClient.generate(anyString())).thenReturn(capturedResponse);
 
         Optional<AiEnrichment> result = enrichmentService.enrich(incident, anomaly);
 
@@ -75,7 +75,7 @@ class IncidentEnrichmentServiceTest {
                 5L,
                 Severity.ERROR
         );
-        when(ollamaClient.generate(anyString())).thenThrow(new RuntimeException("Ollama down"));
+        when(llmClient.generate(anyString())).thenThrow(new RuntimeException("Ollama down"));
 
         Optional<AiEnrichment> result = enrichmentService.enrich(incident, anomaly);
 
