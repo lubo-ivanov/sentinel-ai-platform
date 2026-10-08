@@ -2,7 +2,9 @@ package com.sentinelai.sentinel.kafka;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -62,6 +64,15 @@ public class KafkaConfig {
         p.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, props.consumer().autoOffsetReset());
         p.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, props.consumer().enableAutoCommit());
         p.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, props.consumer().maxPollRecords());
+        return p;
+    }
+
+    public Properties producerProperties() {
+        Properties p = new Properties();
+        p.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, props.bootstrapServers());
+        p.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        p.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        p.put(ProducerConfig.ACKS_CONFIG, "1");
         return p;
     }
 }

@@ -26,7 +26,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 | 12 | [LLM integration v1](steps/step-12-llm-v1.md) | ✅ | 12a: Ollama in compose (`ollama-init` pulls model, `sentinel` depends on `service_completed_successfully`), V7 migration (ai_summary, ai_likely_cause, ai_generated_at, ai_summary_status columns). 12b: `OllamaClient` (RestClient, 5s connect/60s read timeout, `ParameterizedTypeReference`, NPE guard). 12c: `AiEnrichment` record + `AiSummaryStatus` enum + `IncidentEnrichmentService` (prompt template with rule descriptions + specificity instruction, `Optional` return, catch-all fallback). 12d: `CorrelationService` wired — enrich on create only, `firstSeen` set in constructor (single save). 12e: `IncidentEnrichmentServiceTest` — mocked `LlmClient`, captured response as test resource. `IncidentEntity` AI fields, `Incident` DTO updated, `IncidentService.toDto()` maps AI fields. Healthcheck fixed: `curl` not in Ollama image → switched to `ollama list`. `lastSeen` `@Generated` removed — Java owns value. |
 | 12.5 | [LLM classifier fallback](steps/step-12.5-llm-classifier-fallback.md) | ⬜ | New step. Batch LLM proposes classifications for `UNCLASSIFIED`; human accepts → new rule. |
 | 13 | [LLM provider abstraction](steps/step-13-llm-abstraction.md) | ✅ | 13a: `LlmClient` interface, `OllamaClient` implements it, `IncidentEnrichmentService` depends on interface. 13b: `MockLlmClient` (`@ConditionalOnProperty(havingValue="mock")`), `OllamaClient` gets `matchIfMissing=true`. 13c: `LlmRouter` deferred to step 14. 13d: `IncidentEnrichmentServiceTest` updated to mock `LlmClient` interface. |
-| 14 | [Parallel LLM enrichment](steps/step-14-virtual-threads.md) | 🟡 | 14a ✅: `DetectionProperties` (`threshold`, `maxRecentMessages`, `reenrichMultiplier`, `window` — all configurable from `application.yml`), `@ConfigurationPropertiesScan` on `SentinelApplication`. `Anomaly` record gains `recentMessages: List<String>`. `OperationalEvent` gains `message: String`, passed from `signal.getMessage()` in all 5 classification rules + `RuleBasedClassifier.unclassified()`. `AbstractBurstRule` refactored: drops static constants, injects `DetectionProperties`, collects messages (null-safe, capped at `maxRecentMessages`). `List.copyOf()` replaced with `new ArrayList<>()` to allow nulls. All 27 tests green. |
+| 14 | [Parallel LLM enrichment](steps/step-14-virtual-threads.md) | 🟡 | 14a ✅: `DetectionProperties`, `recentMessages` in `Anomaly`, `message` in `OperationalEvent`, `AbstractBurstRule` collects messages. 14b ✅: `incidents.enrichment` Kafka topic, `IncidentEnrichmentMessage` record, `IncidentEventPublisher` (producer in sentinel), `CorrelationService` publishes after save — synchronous enrichment removed. |
 | 15 | [Dashboard UI](steps/step-15-dashboard.md) | ⬜ | Adds classifier triage view. |
 | 16 | [Notification routing](steps/step-16-notifications.md) | ⬜ | |
 | 17 | [Observability polish](steps/step-17-observability.md) | ⬜ | Classifier metrics too. |
@@ -84,9 +84,9 @@ Rules for how the author and the assistant collaborate on this project. Read the
 ## Next up
 
 **Step 14** — Parallel LLM enrichment with virtual threads. Sub-steps:
-- 14a: `recentMessages` in `Anomaly` + `AbstractBurstRule` collects them
-- 14b: `IncidentCreatedEvent` — Spring event published by `CorrelationService`
-- 14c: `AsyncEnrichmentListener` — `@EventListener` + `@Async` on virtual thread executor
+- 14a: `recentMessages` in `Anomaly` + `AbstractBurstRule` collects them ✅
+- 14b: `incidents.enrichment` Kafka topic + `IncidentEnrichmentMessage` published by `CorrelationService` (replaces Spring event approach — Kafka gives durability/replay on recovery)
+- 14c: `IncidentEnrichmentConsumer` — extends `AbstractKafkaConsumer`, calls `IncidentEnrichmentService`, virtual thread executor
 - 14d: parallel fan-out (summary + remediation) via `StructuredTaskScope`
 - 14e: `OLLAMA_NUM_PARALLEL=3` + enrichment duration metrics
 - 14f: `recentMessages` used in prompt

@@ -86,7 +86,17 @@ Updated incident details:
 - `AbstractBurstRule`: drops static `THRESHOLD`/`WINDOW` constants, injects `DetectionProperties`, collects signal messages into `recentMessages` list (null-safe, capped at `maxRecentMessages`, uses `new ArrayList<>()` copy on return to allow nulls)
 - All 5 concrete burst rules: constructor updated to accept `DetectionProperties` and pass to `super()`
 - 27 tests green
-### 14c — `AsyncEnrichmentListener` — `@EventListener` + `@Async` on virtual thread executor
+
+### 14b — `incidents.enrichment` Kafka topic + `IncidentEnrichmentMessage` published by `CorrelationService`
+- Add `incidents.enrichment` to `kafka.topics` in `application.yml` (1 partition, RF=1)
+- `IncidentEnrichmentMessage` record: `incidentId: UUID`, `anomaly: Anomaly`
+- `CorrelationService` publishes to `incidents.enrichment` after `incidentRepository.save(entity)` — replaces synchronous `enrichmentService.enrich()` call
+- **Why Kafka over Spring events:** durability — on JVM crash the message is replayed on recovery; incident won't stay `PENDING` forever
+
+### 14c — `IncidentEnrichmentConsumer` calls `IncidentEnrichmentService`
+- New consumer extending `AbstractKafkaConsumer<IncidentEnrichmentMessage>`
+- Re-fetches `IncidentEntity` by ID, calls `IncidentEnrichmentService.enrich()`, saves result
+- Runs on virtual thread executor
 ### 14d — Parallel fan-out (summary + remediation) via `StructuredTaskScope`
 ### 14e — `OLLAMA_NUM_PARALLEL=3` in compose + `incident_enrichment_duration_seconds` metric
 ### 14f — `recentMessages` used in enrichment prompt

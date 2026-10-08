@@ -35,6 +35,9 @@ kafka:
     - name: signals.raw
       partitions: 6
       replication-factor: 1
+    - name: incidents.enrichment
+      partitions: 1
+      replication-factor: 1
 
 management:
   endpoints:

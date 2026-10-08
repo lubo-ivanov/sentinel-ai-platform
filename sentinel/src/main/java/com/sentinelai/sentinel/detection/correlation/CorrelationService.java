@@ -4,8 +4,7 @@ import com.sentinelai.sentinel.detection.Anomaly;
 import com.sentinelai.sentinel.detection.AnomalyFingerprint;
 import com.sentinelai.sentinel.domain.IncidentEntity;
 import com.sentinelai.sentinel.domain.IncidentStatus;
-import com.sentinelai.sentinel.llm.AiSummaryStatus;
-import com.sentinelai.sentinel.llm.IncidentEnrichmentService;
+import com.sentinelai.sentinel.kafka.IncidentEventPublisher;
 import com.sentinelai.sentinel.repository.IncidentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +19,7 @@ import java.util.UUID;
 public class CorrelationService implements AnomalyListener {
 
     private final IncidentRepository incidentRepository;
-    private final IncidentEnrichmentService enrichmentService;
+    private final IncidentEventPublisher eventPublisher;
 
     @Override
     public void onAnomaly(Anomaly anomaly) {
@@ -48,18 +47,8 @@ public class CorrelationService implements AnomalyListener {
                 1
         );
 
-        enrich(entity, anomaly);
         incidentRepository.save(entity);
-    }
-
-    private void enrich(IncidentEntity incident, Anomaly anomaly) {
-        enrichmentService.enrich(incident, anomaly).ifPresentOrElse(ai -> {
-                    incident.setAiSummary(ai.summary());
-                    incident.setAiLikelyCause(ai.likelyCause());
-                    incident.setAiGeneratedAt(Instant.now());
-                    incident.setAiSummaryStatus(AiSummaryStatus.COMPLETED);
-                },
-                () -> incident.setAiSummaryStatus(AiSummaryStatus.FAILED));
+        eventPublisher.publish("incidents.enrichment", entity.getId().toString(), new IncidentEnrichmentMessage(entity.getId(), anomaly));
     }
 
     private static String resolveSeverity(int count) {

@@ -5,7 +5,7 @@ import com.sentinelai.sentinel.detection.AnomalyFingerprint;
 import com.sentinelai.sentinel.classifier.Severity;
 import com.sentinelai.sentinel.domain.IncidentEntity;
 import com.sentinelai.sentinel.domain.IncidentStatus;
-import com.sentinelai.sentinel.llm.IncidentEnrichmentService;
+import com.sentinelai.sentinel.kafka.IncidentEventPublisher;
 import com.sentinelai.sentinel.repository.IncidentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,13 +40,13 @@ class CorrelationServiceTest {
     private IncidentRepository repository;
 
     @Mock
-    private IncidentEnrichmentService enrichmentService;
+    private IncidentEventPublisher eventPublisher;
 
     private CorrelationService correlationService;
 
     @BeforeEach
     void setUp() {
-        correlationService = new CorrelationService(repository, enrichmentService);
+        correlationService = new CorrelationService(repository, eventPublisher);
     }
 
     @Test
