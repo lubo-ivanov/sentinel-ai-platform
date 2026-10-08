@@ -76,7 +76,24 @@ Updated incident details:
 
 
 
-- A general async job framework. Don't build "Quartz Lite."
+## Sub-steps
+
+### 14a — `recentMessages` in `Anomaly` + `AbstractBurstRule` collects them ✅
+- `DetectionProperties` record: `threshold`, `maxRecentMessages`, `reenrichMultiplier`, `window` — all bound from `sentinel.detection.*` in `application.yml`
+- `@ConfigurationPropertiesScan` on `SentinelApplication`
+- `Anomaly` gains `recentMessages: List<String>` (6th field)
+- `OperationalEvent` gains `message: String` — populated from `signal.getMessage()` in all 5 classification rules + `RuleBasedClassifier.unclassified()`
+- `AbstractBurstRule`: drops static `THRESHOLD`/`WINDOW` constants, injects `DetectionProperties`, collects signal messages into `recentMessages` list (null-safe, capped at `maxRecentMessages`, uses `new ArrayList<>()` copy on return to allow nulls)
+- All 5 concrete burst rules: constructor updated to accept `DetectionProperties` and pass to `super()`
+- 27 tests green
+### 14c — `AsyncEnrichmentListener` — `@EventListener` + `@Async` on virtual thread executor
+### 14d — Parallel fan-out (summary + remediation) via `StructuredTaskScope`
+### 14e — `OLLAMA_NUM_PARALLEL=3` in compose + `incident_enrichment_duration_seconds` metric
+### 14f — `recentMessages` used in enrichment prompt
+### 14g — Re-enrichment trigger on escalation (`anomalyCount % (threshold * reenrichMultiplier) == 0`)
+### 14h — `LlmRouter` with severity-based routing
+
+## Things to skip
 - Cancellation of in-flight enrichment.
 - Incremental result streaming to the UI. Updates on completion are fine.
 

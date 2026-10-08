@@ -5,11 +5,13 @@ import com.sentinelai.sentinel.classifier.OperationalEvent;
 import com.sentinelai.sentinel.classifier.Severity;
 import com.sentinelai.sentinel.detection.Anomaly;
 import com.sentinelai.sentinel.detection.AnomalyRule;
+import com.sentinelai.sentinel.detection.DetectionProperties;
 import com.sentinelai.sentinel.detection.counter.SlidingWindowCounter;
 import lombok.RequiredArgsConstructor;
 
-import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,9 +23,9 @@ public abstract class AbstractBurstRule implements AnomalyRule {
     private final FailureType type;
     private final String payloadKey;
     private final Severity severity;
+    private final List<String> recentMessages = new ArrayList<>();
+    private final DetectionProperties props;
 
-    protected static final Duration WINDOW = Duration.ofSeconds(60);
-    protected static final long THRESHOLD = 5;
 
     @Override
     public String id() {
@@ -43,18 +45,18 @@ public abstract class AbstractBurstRule implements AnomalyRule {
 
         String counterKey = id() + ":" + value;
         Instant now = Instant.now();
-        counter.record(counterKey, now, WINDOW);
+        counter.record(counterKey, now, props.window());
 
-        long count = counter.count(counterKey, now, WINDOW);
-        if (count < THRESHOLD) {
-            return Optional.empty();
-        }
+        long count = counter.count(counterKey, now, props.window());
+        if (count < props.threshold()) return Optional.empty();
+        if (!recentMessages.isEmpty() && recentMessages.size() >= props.maxRecentMessages()) recentMessages.removeFirst();
+        recentMessages.add(event.message());
 
         return Optional.of(new Anomaly(id(),
                 now,
                 Map.of(payloadKey, value.toString()),
                 count,
-                severity)
-        );
+                severity,
+                new ArrayList<>(recentMessages)));
     }
 }

@@ -23,7 +23,7 @@ public class StockConsistencyRiskRule extends AbstractClassificationRule {
 
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if(!matchesPatterns(signal, PATTERN)) return  Optional.empty();
+        if (!matchesPatterns(signal, PATTERN)) return Optional.empty();
 
         String item = hintAsString(signal, KEY_ITEM);
         String expected = hintAsString(signal, KEY_EXPECTED);
@@ -33,11 +33,13 @@ public class StockConsistencyRiskRule extends AbstractClassificationRule {
         }
 
         return Optional.of(OperationalEvent.fromRule(
-                signal,
-                RULE_ID,
-                FailureType.STOCK_CONSISTENCY_RISK,
-                Severity.WARN,
-                Map.of(KEY_ITEM, item, KEY_EXPECTED, expected, KEY_ACTUAL, actual))
+                        signal,
+                        RULE_ID,
+                        FailureType.STOCK_CONSISTENCY_RISK,
+                        Severity.WARN,
+                        Map.of(KEY_ITEM, item, KEY_EXPECTED, expected, KEY_ACTUAL, actual),
+                        signal.getMessage()
+                )
         );
     }
 }

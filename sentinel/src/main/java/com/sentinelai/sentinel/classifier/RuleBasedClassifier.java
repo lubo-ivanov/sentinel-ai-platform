@@ -62,7 +62,8 @@ public class RuleBasedClassifier implements Classifier {
                         null,
                         0.0
                 ),
-                Collections.emptyMap()
+                Collections.emptyMap(),
+                signal.getMessage()
         );
     }
 }

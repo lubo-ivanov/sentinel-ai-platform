@@ -19,9 +19,10 @@ public class StockReservationTimeoutRule extends AbstractClassificationRule {
     public StockReservationTimeoutRule() {
         super(RULE_ID);
     }
+
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if(!matchesPatterns(signal, PATTERN)) return  Optional.empty();
+        if (!matchesPatterns(signal, PATTERN)) return Optional.empty();
 
         String item = hintAsString(signal, KEY_ITEM);
         String warehouse = hintAsString(signal, KEY_WAREHOUSE);
@@ -31,11 +32,13 @@ public class StockReservationTimeoutRule extends AbstractClassificationRule {
         }
 
         return Optional.of(OperationalEvent.fromRule(
-                signal,
-                RULE_ID,
-                FailureType.STOCK_RESERVATION_TIMEOUT,
-                Severity.ERROR,
-                Map.of(KEY_ITEM, item, KEY_WAREHOUSE, warehouse))
+                        signal,
+                        RULE_ID,
+                        FailureType.STOCK_RESERVATION_TIMEOUT,
+                        Severity.ERROR,
+                        Map.of(KEY_ITEM, item, KEY_WAREHOUSE, warehouse),
+                        signal.getMessage()
+                )
         );
     }
 }

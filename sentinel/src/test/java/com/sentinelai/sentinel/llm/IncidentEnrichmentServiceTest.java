@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,7 +51,8 @@ class IncidentEnrichmentServiceTest {
                 Instant.now(),
                 Map.of("provider", "stripe"),
                 5L,
-                Severity.ERROR
+                Severity.ERROR,
+                List.of()
         );
         when(llmClient.generate(anyString())).thenReturn(capturedResponse);
 
@@ -73,7 +75,8 @@ class IncidentEnrichmentServiceTest {
                 Instant.now(),
                 Map.of("provider", "stripe"),
                 5L,
-                Severity.ERROR
+                Severity.ERROR,
+                List.of()
         );
         when(llmClient.generate(anyString())).thenThrow(new RuntimeException("Ollama down"));
 

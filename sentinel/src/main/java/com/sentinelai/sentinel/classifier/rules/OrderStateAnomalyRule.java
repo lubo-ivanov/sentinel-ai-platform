@@ -24,7 +24,7 @@ public class OrderStateAnomalyRule extends AbstractClassificationRule {
 
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if(!matchesPatterns(signal, ORDER_STATE_PATTERN)) return  Optional.empty();
+        if (!matchesPatterns(signal, ORDER_STATE_PATTERN)) return Optional.empty();
 
         String orderId = hintAsString(signal, KEY_ORDER_ID);
         if (orderId == null) {
@@ -44,7 +44,8 @@ public class OrderStateAnomalyRule extends AbstractClassificationRule {
                 RULE_ID,
                 FailureType.ORDER_STATE_ANOMALY,
                 Severity.ERROR,
-                payload)
+                payload,
+                signal.getMessage())
         );
     }
 }

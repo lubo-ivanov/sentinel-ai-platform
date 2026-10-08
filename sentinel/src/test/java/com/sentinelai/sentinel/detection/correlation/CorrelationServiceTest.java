@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,7 +33,7 @@ class CorrelationServiceTest {
 
     private static final String RULE_ID = "payment_provider_timeout_burst";
     private static final Anomaly STRIPE_ANOMALY = new Anomaly(
-            RULE_ID, Instant.now(), Map.of("provider", "stripe"), 5L, Severity.ERROR
+            RULE_ID, Instant.now(), Map.of("provider", "stripe"), 5L, Severity.ERROR, List.of()
     );
 
     @Mock
@@ -84,7 +85,7 @@ class CorrelationServiceTest {
     @Test
     void differentFingerprints_createSeparateIncidents() {
         Anomaly paypalAnomaly = new Anomaly(
-                RULE_ID, Instant.now(), Map.of("provider", "paypal"), 5L, Severity.ERROR
+                RULE_ID, Instant.now(), Map.of("provider", "paypal"), 5L, Severity.ERROR, List.of()
         );
         String stripeFingerprint = AnomalyFingerprint.of(STRIPE_ANOMALY).value();
         String paypalFingerprint = AnomalyFingerprint.of(paypalAnomaly).value();

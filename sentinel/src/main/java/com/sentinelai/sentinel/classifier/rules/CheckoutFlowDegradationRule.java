@@ -22,7 +22,7 @@ public class CheckoutFlowDegradationRule extends AbstractClassificationRule {
 
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if (!matchesPatterns(signal, CHECKOUT_PATTERN)) return  Optional.empty();
+        if (!matchesPatterns(signal, CHECKOUT_PATTERN)) return Optional.empty();
 
         String service = hintAsString(signal, KEY_SERVICE);
         if (service == null) {
@@ -36,7 +36,8 @@ public class CheckoutFlowDegradationRule extends AbstractClassificationRule {
                         Severity.WARN,
                         durationMs != null
                                 ? Map.of(KEY_SERVICE, service, KEY_DURATION, durationMs)
-                                : Map.of(KEY_SERVICE, service)
+                                : Map.of(KEY_SERVICE, service),
+                        signal.getMessage()
                 )
         );
     }

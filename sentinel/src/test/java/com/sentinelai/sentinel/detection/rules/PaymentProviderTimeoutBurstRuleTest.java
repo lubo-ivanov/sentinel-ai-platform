@@ -4,6 +4,7 @@ import com.sentinelai.sentinel.classifier.FailureType;
 import com.sentinelai.sentinel.classifier.OperationalEvent;
 import com.sentinelai.sentinel.classifier.Severity;
 import com.sentinelai.sentinel.detection.Anomaly;
+import com.sentinelai.sentinel.detection.DetectionProperties;
 import com.sentinelai.sentinel.detection.counter.SlidingWindowCounter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,7 @@ class PaymentProviderTimeoutBurstRuleTest {
     void setUp() {
         counter = mock(SlidingWindowCounter.class);
         doNothing().when(counter).record(anyString(), any(Instant.class), any(Duration.class));
-        rule = new PaymentProviderTimeoutBurstRule(counter);
+        rule = new PaymentProviderTimeoutBurstRule(counter, new DetectionProperties(Duration.ofSeconds(60), 5, 5, 3));
     }
 
     @Test
@@ -127,7 +128,8 @@ class PaymentProviderTimeoutBurstRuleTest {
                 type,
                 Severity.ERROR,
                 new OperationalEvent.Classification(OperationalEvent.Classification.Method.RULE, "some-rule", 1.0),
-                payload
+                payload,
+                null
         );
     }
 }

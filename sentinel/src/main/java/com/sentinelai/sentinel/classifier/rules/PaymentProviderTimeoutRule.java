@@ -21,7 +21,7 @@ public class PaymentProviderTimeoutRule extends AbstractClassificationRule {
 
     @Override
     public Optional<OperationalEvent> apply(RawSignalEntity signal) {
-        if(!matchesPatterns(signal, TIMEOUT_PATTERN)) return  Optional.empty();
+        if (!matchesPatterns(signal, TIMEOUT_PATTERN)) return Optional.empty();
 
         String provider = hintAsString(signal, KEY_PROVIDER);
         if (provider == null) {
@@ -33,7 +33,8 @@ public class PaymentProviderTimeoutRule extends AbstractClassificationRule {
                 RULE_ID,
                 FailureType.PAYMENT_PROVIDER_TIMEOUT,
                 Severity.ERROR,
-                Map.of(KEY_PROVIDER, provider)
+                Map.of(KEY_PROVIDER, provider),
+                signal.getMessage()
         ));
     }
 }
