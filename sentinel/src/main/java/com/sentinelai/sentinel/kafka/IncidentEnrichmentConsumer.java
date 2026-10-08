@@ -13,6 +13,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 @Slf4j
@@ -56,6 +59,14 @@ public class IncidentEnrichmentConsumer extends AbstractKafkaConsumer<IncidentEn
     protected void onProcessingFailed(ConsumerRecord<String, String> record, Throwable cause) {
         log.error("Enrichment processing failed for offset={}", record.offset(), cause);
     }
+
+    @Override
+    protected void processBatch(List<ConsumerRecord<String, String>> records) {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            records.forEach(record -> executor.submit(() -> handleRecord(record)));
+        }
+    }
+
 
     private void enrichAndSave(IncidentEntity incident, Anomaly anomaly) {
         enrichmentService.enrich(incident, anomaly).ifPresentOrElse(

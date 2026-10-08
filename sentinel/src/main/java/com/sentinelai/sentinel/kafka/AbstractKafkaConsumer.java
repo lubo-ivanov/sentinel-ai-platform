@@ -10,6 +10,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -82,9 +83,9 @@ public abstract class AbstractKafkaConsumer<V> {
         log.info("Polled {} records from {}", records.count(), topicName());
 
         try {
-            for (ConsumerRecord<String, String> record : records) {
-                handleRecord(record);
-            }
+            List<ConsumerRecord<String, String>> batch = new ArrayList<>();
+            records.forEach(batch::add);
+            processBatch(batch);
             consumer.commitSync();
         } catch (Exception e) {
             log.error("Batch processing halted before commit — will retry on next poll", e);
@@ -92,7 +93,13 @@ public abstract class AbstractKafkaConsumer<V> {
 
     }
 
-    private void handleRecord(ConsumerRecord<String, String> record) {
+    protected void processBatch(List<ConsumerRecord<String, String>> records) {
+        for (ConsumerRecord<String, String> record : records) {
+            handleRecord(record);
+        }
+    }
+
+    protected void handleRecord(ConsumerRecord<String, String> record) {
         int maxAttempts = kafkaConfig.maxAttempts();
         long backoffMs = kafkaConfig.retryBackoff().toMillis();
 
