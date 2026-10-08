@@ -1,5 +1,6 @@
 package com.sentinelai.sentinel.api;
 
+import com.sentinelai.sentinel.llm.AiSummaryStatus;
 import com.sentinelai.sentinel.service.IncidentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,8 @@ public class IncidentControllerTest {
         Incident incident = new Incident(
                 id, "boom", "HIGH", "OPEN", "",
                 Instant.now(), Instant.now(), 1,
-                Instant.now(), Instant.now(), 0L
+                Instant.now(), Instant.now(), 0L,
+                null, null, null, AiSummaryStatus.PENDING
         );
 
         when(incidentService.findAll()).thenReturn(List.of(incident));

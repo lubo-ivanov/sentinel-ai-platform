@@ -38,6 +38,11 @@ When an incident is created, generate a one-paragraph human-readable summary usi
 - Manual API call returns the incident with summary populated.
 - One unit test using a captured Ollama response (saved as a test resource) verifies parsing.
 
+## Deferred to step 14
+
+- **`recentMessages` in `Anomaly`** — `AbstractBurstRule` to collect last N signal messages as it counts events; pass in `Anomaly.recentMessages` (cap 5). Used in enrichment prompt as "Recent signal messages" section.
+- **Re-enrichment on escalation** — trigger at `anomalyCount % (threshold * reenrichMultiplier) == 0`. Both values configurable. Full design in [step-14-virtual-threads.md](step-14-virtual-threads.md).
+
 ## Things to skip
 
 - Provider abstraction — [step 13](step-13-llm-abstraction.md).

@@ -1,5 +1,7 @@
 package com.sentinelai.sentinel.api;
 
+import com.sentinelai.sentinel.llm.AiSummaryStatus;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -14,5 +16,9 @@ public record Incident(
         Integer anomalyCount,
         Instant createdAt,
         Instant updatedAt,
-        Long version
+        Long version,
+        String aiSummary,
+        String aiLikelyCause,
+        Instant aiGeneratedAt,
+        AiSummaryStatus aiSummaryStatus
 ) {}

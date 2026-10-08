@@ -44,7 +44,37 @@ Make incident enrichment **asynchronous** and **parallel**. Incident creation re
 - One LLM call failing doesn't block the others.
 - README captures the before/after numbers.
 
-## Things to skip
+## Re-enrichment on escalation
+
+When an incident's `anomalyCount` reaches a multiple of `threshold * reenrichMultiplier`, re-enrich with accumulated context:
+
+- **Trigger:** `anomalyCount % (threshold * reenrichMultiplier) == 0` in `updateIncident()`
+- **Config:** `sentinel.detection.threshold` (default 5) and `sentinel.enrichment.reenrich-multiplier` (default 3) — re-enrichment fires at anomalyCount = 15, 30, 45...
+- **Prompt context:** includes previous `ai_summary` as "prior analysis" + last N `recentMessages` from the anomaly burst
+- **Goal:** model can say "incident is escalating — previously isolated to Stripe checkout, now affecting all payment methods"
+
+### `recentMessages` in `Anomaly`
+
+`AbstractBurstRule` collects the last N signal messages as it counts events and passes them in `Anomaly.recentMessages` (cap at 5). Used in:
+1. First enrichment prompt — "Recent signal messages" section
+2. Re-enrichment prompt — "New signals since last analysis" section
+
+### Re-enrichment prompt shape
+
+```
+Prior analysis:
+<previous ai_summary>
+
+New signals since last analysis:
+- "Connection to Stripe timed out after 30000ms"
+- "Stripe API returned 504 Gateway Timeout"
+
+Updated incident details:
+- Anomaly count: 15
+- ...
+```
+
+
 
 - A general async job framework. Don't build "Quartz Lite."
 - Cancellation of in-flight enrichment.

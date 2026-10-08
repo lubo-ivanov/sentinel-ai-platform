@@ -50,7 +50,6 @@ public class IncidentEntity {
     private Instant firstSeen;
 
     @Setter
-    @Generated(event = {INSERT, UPDATE})
     @Column(name = "last_seen", nullable = false)
     private Instant lastSeen;
 
@@ -95,6 +94,7 @@ public class IncidentEntity {
         this.fingerprint = fingerprint;
         this.anomalyCount = anomalyCount;
         this.firstSeen = Instant.now();
+        this.lastSeen = Instant.now();
     }
 
 }

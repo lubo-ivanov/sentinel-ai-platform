@@ -84,7 +84,11 @@ public class IncidentService {
                 e.getAnomalyCount(),
                 e.getCreatedAt(),
                 e.getUpdatedAt(),
-                e.getVersion()
+                e.getVersion(),
+                e.getAiSummary(),
+                e.getAiLikelyCause(),
+                e.getAiGeneratedAt(),
+                e.getAiSummaryStatus()
         );
     }
 
