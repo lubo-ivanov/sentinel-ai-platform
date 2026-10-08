@@ -1,0 +1,5 @@
+{
+  "summary": "Stripe payment provider is experiencing repeated timeouts indicating a potential outage or severe degradation.",
+  "likely_cause": "Network connectivity issue or overload on the Stripe API endpoint causing connection timeouts.",
+  "severity_assessment": "HIGH severity — 5 anomalies detected within the burst window for provider stripe."
+}

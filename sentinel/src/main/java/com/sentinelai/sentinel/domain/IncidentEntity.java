@@ -1,5 +1,6 @@
 package com.sentinelai.sentinel.domain;
 
+import com.sentinelai.sentinel.llm.AiSummaryStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -44,7 +45,7 @@ public class IncidentEntity {
     @Column(nullable = false, length = 64)
     private String fingerprint;
 
-    @Generated(event = INSERT)
+    @Setter
     @Column(name = "first_seen", nullable = false)
     private Instant firstSeen;
 
@@ -65,6 +66,23 @@ public class IncidentEntity {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
 
+    @Setter
+    @Column(name = "ai_summary")
+    private String aiSummary;
+
+    @Setter
+    @Column(name = "ai_likely_cause")
+    private String aiLikelyCause;
+
+    @Setter
+    @Column(name = "ai_generated_at")
+    private Instant aiGeneratedAt;
+
+    @Setter
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ai_summary_status")
+    private AiSummaryStatus aiSummaryStatus = AiSummaryStatus.PENDING;
+
     @Version
     @Column(nullable = false)
     private Long version;
@@ -76,6 +94,7 @@ public class IncidentEntity {
         this.status = status;
         this.fingerprint = fingerprint;
         this.anomalyCount = anomalyCount;
+        this.firstSeen = Instant.now();
     }
 
 }

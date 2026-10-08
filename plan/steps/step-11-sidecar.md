@@ -15,46 +15,44 @@ Insert a sidecar in front of each producer. Producers POST events to localhost; 
 - `RawSignal` record in `signal/` package — **no `source` field** (sidecar stamps it from config)
 - `application.yml` with env-var-backed defaults for all config
 
-### 11b — In-memory queue + Kafka publisher (in progress)
-- `SidecarProperties` — `@ConfigurationProperties(prefix="sidecar")` record: `source`, `signalsTopic`, `queueCapacity`
+### 11b — In-memory queue + Kafka publisher ✅
+- `SidecarProperties` — `@ConfigurationProperties(prefix="sidecar")` record: `source`, `signalsTopic`, `queueCapacity`, `spillDir`, `maxSpillBytes`
 - `kafka/KafkaProperties` — `@ConfigurationProperties(prefix="kafka")` record: `bootstrapServers`, `producer{acks, enableIdempotence}`
 - `kafka/KafkaConfig` — `@Configuration`, builds `producerProperties()` from `KafkaProperties`
-- `kafka/SignalPublisher` — `@Component`, creates `KafkaProducer`, `publish(RawSignal)`, `@PreDestroy close()`
-- `EventQueue` — wraps `ArrayBlockingQueue<RawSignal>`, `offer()` returns false + logs warn when full
-- Background publisher thread drains queue to Kafka
-- `EventController.receive()` wired to `EventQueue.offer()`
+- `kafka/SignalPublisher` — `@Component`, creates `KafkaProducer`, `publish(RawSignal)`, `@PreDestroy close()`; uses `source` as Kafka partition key
+- `buffer/EventQueue` — wraps `ArrayBlockingQueue<RawSignal>`, `@Getter`, `offer()` logs warn when full; gauge registered in constructor
+- `buffer/ForwarderRunner` — virtual thread drain loop, `@PostConstruct`/`@PreDestroy`, spills on failure, drains on RECOVERY
+- `EventController.receive()` wired to `NormalizationService` then `EventQueue`
 
-### 11c — State machine + /health
+### 11c — State machine + /health ✅
 - States: `NORMAL`, `DEGRADED`, `DOWN`, `RECOVERY`
-- `SidecarState` enum + `StateManager` component with explicit transition methods
-- `/health` endpoint returns state + buffer depth + disk spill count
+- `health/SidecarState` enum + `health/StateManager` — `AtomicReference` + `AtomicInteger` failure count; `getAndUpdate()` for atomic transitions; failure thresholds: 3→DEGRADED, 10→DOWN; success: DEGRADED/DOWN→RECOVERY, RECOVERY→NORMAL
+- `controller/HealthController` — GET `/health` returns state + bufferDepth + spillCount
 
-### 11d — Disk spillover
-- On Kafka failure → spill to append-only files (one JSON per line)
-- On recovery → drain disk first (in arrival order), then resume in-memory
-- Configurable spill directory (`sidecar.spill-dir`) and max disk cap
-- `events_dropped_total` counter when disk cap also exceeded
+### 11d — Disk spillover ✅
+- `spill/SpillManager` — append-only `spill.jsonl`, 100MB cap, `spill()` checks cap before write, `drain()` reads all lines + deletes file, `spillCount()` via `Files.lines()` try-with-resources
+- `ForwarderRunner` spills on publish failure; checks `RECOVERY` state after `markSuccess()` and drains disk back to queue
 
-### 11e — Source ownership + producers switch to HTTP
-- Producers drop `source` field from `RawSignal` and their entire Kafka infra (`kafka/` package deleted from each producer)
-- Producers gain a simple HTTP client (`RestClient`) that POSTs to `${SIDECAR_URL}/events`
-- `SignalEmitter` in each producer calls HTTP client instead of `SignalPublisher`
+### 11e — Source ownership + producers switch to HTTP ✅
+- Producers drop `source` field from `RawSignal` and entire `kafka/` package
+- `SidecarClient` in each producer — `RestClient` POST to `${sidecar.url:http://localhost:9090}/events`; `waitForSidecar()` `@PostConstruct` polls `/health` indefinitely until sidecar is ready
+- `NormalizationService` in sidecar — stamps `source` from `SidecarProperties.source()` (`$HOSTNAME`), defaults `occurredAt` to `Instant.now().toString()` if null
+- `RawSignalConsumer.process()` fixed: was hardcoded `"payment-service"`, now uses `raw.key()` (Kafka record key = source stamped by sidecar)
 
-### 11f — Compose wiring
-- Root `Dockerfile` gets `sidecar-build` + `sidecar-runtime` targets
-- Three sidecar instances in `compose.yml`:
-  - `payment-sidecar` (port 9082, `SIDECAR_SOURCE=payment-service`)
-  - `order-sidecar` (port 9083, `SIDECAR_SOURCE=order-service`)
-  - `inventory-sidecar` (port 9084, `SIDECAR_SOURCE=inventory-service`)
-- Each producer depends on its sidecar (`condition: service_healthy`)
-- E2E verified: all producers → sidecars → Kafka → Sentinel
+### 11f — Compose wiring ✅
+- Root `Dockerfile` — `sidecar-build` + `sidecar-runtime` targets added; `sidecar/pom.xml` copied in base stage
+- Three sidecar instances: `payment-sidecar`, `order-sidecar`, `inventory-sidecar` — all use `target: sidecar-runtime`, `network_mode: service:<producer>`, `depends_on: kafka: service_healthy`
+- `network_mode: service:<producer>` shares producer's network namespace — sidecar listens on `localhost:9090` inside producer's network; no `SIDECAR_URL` env var needed
+- Each producer gets `hostname: <service-name>` — `$HOSTNAME` inside sidecar = producer hostname = source name
+- `application.yml` reads `${HOSTNAME:unknown}` directly as `sidecar.source`
+- `IncidentEntity.lastSeen` fixed: `@Generated(event={INSERT,UPDATE})` — resolves HHH000502 immutability warning
 
-### 11g — Metrics
-- `events.received` counter (tagged by source)
-- `events.published` counter
-- `buffer.depth` gauge
-- `events.spilled` counter
-- `events.dropped` counter
+### 11g — Metrics ✅
+- `events.received` counter — `EventController`, tagged by source
+- `events.published` counter — `ForwarderRunner`, tagged by source
+- `buffer.depth` gauge — `EventQueue` constructor, tagged by source
+- `events.spilled` counter — `SpillManager.spill()` on successful write, tagged by source
+- `events.dropped` counter — `SpillManager.spill()` when disk cap exceeded, tagged by source
 
 ## Architecture decisions
 
