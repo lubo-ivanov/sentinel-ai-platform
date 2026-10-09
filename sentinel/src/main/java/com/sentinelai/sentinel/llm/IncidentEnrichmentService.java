@@ -8,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,8 @@ public class IncidentEnrichmentService {
         - Total anomaly count: %d
         - First fired: %s
         - Incident first seen: %s
+        - Recent signal messages:
+            %s
 
         JSON response:
         """;
@@ -58,6 +62,9 @@ public class IncidentEnrichmentService {
 
     private String buildPrompt(IncidentEntity incident, Anomaly anomaly) {
         String description = RULE_DESCRIPTIONS.getOrDefault(anomaly.ruleId(), "Repeated anomaly detected in production");
+        String messages = anomaly.recentMessages().stream().filter(Objects::nonNull)
+                .map(m -> "-n " + m)
+                .collect(Collectors.joining("\n"));
         return PROMPT_TEMPLATE.formatted(
                 anomaly.ruleId(),
                 description,
@@ -66,7 +73,8 @@ public class IncidentEnrichmentService {
                 anomaly.count(),
                 incident.getAnomalyCount(),
                 anomaly.firedAt(),
-                incident.getFirstSeen()
+                incident.getFirstSeen(),
+                messages
         );
     }
 }
