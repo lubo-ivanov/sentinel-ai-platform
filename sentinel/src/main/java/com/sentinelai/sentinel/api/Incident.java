@@ -20,5 +20,6 @@ public record Incident(
         String aiSummary,
         String aiLikelyCause,
         Instant aiGeneratedAt,
+        String remediationSteps,
         AiSummaryStatus aiSummaryStatus
 ) {}

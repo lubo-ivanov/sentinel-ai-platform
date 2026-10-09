@@ -26,7 +26,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 | 12 | [LLM integration v1](steps/step-12-llm-v1.md) | ✅ | 12a: Ollama in compose (`ollama-init` pulls model, `sentinel` depends on `service_completed_successfully`), V7 migration (ai_summary, ai_likely_cause, ai_generated_at, ai_summary_status columns). 12b: `OllamaClient` (RestClient, 5s connect/60s read timeout, `ParameterizedTypeReference`, NPE guard). 12c: `AiEnrichment` record + `AiSummaryStatus` enum + `IncidentEnrichmentService` (prompt template with rule descriptions + specificity instruction, `Optional` return, catch-all fallback). 12d: `CorrelationService` wired — enrich on create only, `firstSeen` set in constructor (single save). 12e: `IncidentEnrichmentServiceTest` — mocked `LlmClient`, captured response as test resource. `IncidentEntity` AI fields, `Incident` DTO updated, `IncidentService.toDto()` maps AI fields. Healthcheck fixed: `curl` not in Ollama image → switched to `ollama list`. `lastSeen` `@Generated` removed — Java owns value. |
 | 12.5 | [LLM classifier fallback](steps/step-12.5-llm-classifier-fallback.md) | ⬜ | New step. Batch LLM proposes classifications for `UNCLASSIFIED`; human accepts → new rule. |
 | 13 | [LLM provider abstraction](steps/step-13-llm-abstraction.md) | ✅ | 13a: `LlmClient` interface, `OllamaClient` implements it, `IncidentEnrichmentService` depends on interface. 13b: `MockLlmClient` (`@ConditionalOnProperty(havingValue="mock")`), `OllamaClient` gets `matchIfMissing=true`. 13c: `LlmRouter` deferred to step 14. 13d: `IncidentEnrichmentServiceTest` updated to mock `LlmClient` interface. |
-| 14 | [Parallel LLM enrichment](steps/step-14-virtual-threads.md) | 🟡 | 14a ✅ 14b ✅ 14c ✅ 14d ✅ 14e ✅ 14f ✅. 14g ✅: re-enrichment on escalation — `onAnomaly()` checks `anomalyCount % (threshold * reenrichMultiplier) == 0`, publishes to `incidents.enrichment` conditionally; `@Transactional` on class. |
+| 14 | [Parallel LLM enrichment](steps/step-14-virtual-threads.md) | 🟡 | 14a-14g ✅. 14h 🟡 in progress: V8 migration done, `remediationSteps` on entity+DTO done, `LlmProperties` stub created. Still needed: `suggestRemediation()` in `IncidentEnrichmentService` (prompt + retry logic), wire into `enrichAndSave()`, `enrich()` exception handling split (JsonProcessingException vs transient). |
 | 15 | [Dashboard UI](steps/step-15-dashboard.md) | ⬜ | Adds classifier triage view. |
 | 16 | [Notification routing](steps/step-16-notifications.md) | ⬜ | |
 | 17 | [Observability polish](steps/step-17-observability.md) | ⬜ | Classifier metrics too. |
@@ -91,4 +91,5 @@ Rules for how the author and the assistant collaborate on this project. Read the
 - 14e: `OLLAMA_NUM_PARALLEL=3` + enrichment duration metrics
 - 14f: `recentMessages` used in prompt
 - 14g: re-enrichment trigger on escalation
-- 14h: `LlmRouter` with severity-based routing
+- 14h: remediation suggestion — second LLM call after enrichment, `remediationSteps` field on incident
+- 14i: `LlmRouter` — severity-based routing (`LOW`/`MEDIUM` → `llama3.2:3b`, `HIGH` → `llama3.1:8b`)

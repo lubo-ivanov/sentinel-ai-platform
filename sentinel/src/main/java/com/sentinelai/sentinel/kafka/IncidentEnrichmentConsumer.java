@@ -13,7 +13,6 @@ import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -78,22 +77,17 @@ public class IncidentEnrichmentConsumer extends AbstractKafkaConsumer<IncidentEn
     }
 
 
-    @Transactional
-    protected void enrichAndSave(IncidentEntity incident, Anomaly anomaly) {
+    private void enrichAndSave(IncidentEntity incident, Anomaly anomaly) {
         Timer.Sample sample = Timer.start(meterRegistry);
         AtomicBoolean succeeded = new AtomicBoolean(false);
         try {
             enrichmentService.enrich(incident, anomaly).ifPresentOrElse(
-                    ai -> {
-                        applyEnrichment(incident, ai);
-                        incidentRepository.save(incident);
-                        succeeded.set(true);
-                    },
-                    () -> {
-                        markFailed(incident);
-                        incidentRepository.save(incident);
-                    }
+                    ai -> applyEnrichment(incident, ai, succeeded),
+                    () -> markFailed(incident)
             );
+            enrichmentService.suggestRemediation(incident, anomaly)
+                    .ifPresent(incident::setRemediationSteps);
+            incidentRepository.save(incident);
         } finally {
             sample.stop(Timer.builder(METRIC_ENRICHMENT_DURATION)
                     .tag(STATUS, succeeded.get() ? STATUS_COMPLETED : STATUS_FAILED)
@@ -102,11 +96,12 @@ public class IncidentEnrichmentConsumer extends AbstractKafkaConsumer<IncidentEn
         }
     }
 
-    private static void applyEnrichment(IncidentEntity incident, AiEnrichment ai) {
+    private static void applyEnrichment(IncidentEntity incident, AiEnrichment ai, AtomicBoolean succeeded) {
         incident.setAiSummary(ai.summary());
         incident.setAiLikelyCause(ai.likelyCause());
         incident.setAiGeneratedAt(Instant.now());
         incident.setAiSummaryStatus(AiSummaryStatus.COMPLETED);
+        succeeded.set(true);
     }
 
 

@@ -88,6 +88,7 @@ public class IncidentService {
                 e.getAiSummary(),
                 e.getAiLikelyCause(),
                 e.getAiGeneratedAt(),
+                e.getRemediationSteps(),
                 e.getAiSummaryStatus()
         );
     }

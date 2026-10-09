@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -45,25 +46,57 @@ public class IncidentEnrichmentService {
         JSON response:
         """;
 
+    private static final String REMEDIATION_TEMPLATE = """
+    You are an SRE assistant. Suggest concrete remediation steps for the following incident.
+    Return ONLY a plain text numbered list of actionable steps. No JSON, no preamble.
+
+    Incident summary: %s
+    Likely cause: %s
+    Severity: %s
+    Affected subject: %s
+    Recent signal messages:
+        %s
+
+    Remediation steps:
+    """;
+
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
+    private final LlmProperties props;
 
     public Optional<AiEnrichment> enrich(IncidentEntity incident, Anomaly anomaly) {
-        try {
-            String prompt = buildPrompt(incident, anomaly);
-            String raw = llmClient.generate(prompt);
-            AiEnrichment enrichment = objectMapper.readValue(raw, AiEnrichment.class);
-            return Optional.of(enrichment);
-        } catch (Exception e) {
-            log.error("LLM enrichment failed for incident id={}", incident.getId(), e);
-            return Optional.empty();
+        for (int attempt = 1; attempt <= props.maxAttempts(); attempt++) {
+            try {
+                String prompt = buildEnrichmentPrompt(incident, anomaly);
+                String raw = llmClient.generate(prompt);
+                AiEnrichment enrichment = objectMapper.readValue(raw, AiEnrichment.class);
+                return Optional.of(enrichment);
+            } catch (Exception e) {
+                log.error("LLM enrichment failed for incident id={}", incident.getId(), e);
+                sleep(props.retryBackoff());
+            }
         }
+        return Optional.empty();
     }
 
-    private String buildPrompt(IncidentEntity incident, Anomaly anomaly) {
+
+    public Optional<String> suggestRemediation(IncidentEntity incident, Anomaly anomaly) {
+        for (int attempt = 1; attempt <= props.maxAttempts(); attempt++) {
+            try {
+                String prompt = buildRemediationPrompt(incident, anomaly);
+                return Optional.of(llmClient.generate(prompt));
+            } catch (Exception e) {
+                log.error("LLM remediation generation failed for incident id={}", incident.getId(), e);
+                sleep(props.retryBackoff());
+            }
+        }
+        return Optional.empty();
+    }
+
+    private String buildEnrichmentPrompt(IncidentEntity incident, Anomaly anomaly) {
         String description = RULE_DESCRIPTIONS.getOrDefault(anomaly.ruleId(), "Repeated anomaly detected in production");
         String messages = anomaly.recentMessages().stream().filter(Objects::nonNull)
-                .map(m -> "-n " + m)
+                .map(m -> "- " + m)
                 .collect(Collectors.joining("\n"));
         return PROMPT_TEMPLATE.formatted(
                 anomaly.ruleId(),
@@ -76,5 +109,26 @@ public class IncidentEnrichmentService {
                 incident.getFirstSeen(),
                 messages
         );
+    }
+
+    private String buildRemediationPrompt(IncidentEntity incident, Anomaly anomaly) {
+        String messages = anomaly.recentMessages().stream().filter(Objects::nonNull)
+                .map(m -> "- " + m)
+                .collect(Collectors.joining("\n"));
+        return REMEDIATION_TEMPLATE.formatted(
+                Objects.toString(incident.getAiSummary(), "N/A"),
+                Objects.toString(incident.getAiLikelyCause(), "N/A"),
+                incident.getSeverity(),
+                anomaly.keys(),
+                messages
+        );
+    }
+
+    private static void sleep(Duration d) {
+        try {
+            Thread.sleep(d);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

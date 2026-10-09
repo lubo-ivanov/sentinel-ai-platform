@@ -53,3 +53,7 @@ sentinel:
     threshold: 5
     max-recent-messages: 5
     reenrich-multiplier: 3
+  llm:
+    provider: ollama
+    max-attempts: 3
+    retry-backoff: 5s

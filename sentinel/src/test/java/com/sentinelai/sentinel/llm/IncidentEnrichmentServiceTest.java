@@ -34,10 +34,11 @@ class IncidentEnrichmentServiceTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        enrichmentService = new IncidentEnrichmentService(llmClient, new ObjectMapper());
-        capturedResponse = new String(
-                getClass().getClassLoader().getResourceAsStream("ollama-response.json").readAllBytes()
-        );
+        LlmProperties llmProperties = new LlmProperties("ollama", 1, java.time.Duration.ofMillis(0));
+        enrichmentService = new IncidentEnrichmentService(llmClient, new ObjectMapper(), llmProperties);
+        try (var stream = getClass().getClassLoader().getResourceAsStream("ollama-response.json")) {
+            capturedResponse = new String(stream.readAllBytes());
+        }
     }
 
     @Test

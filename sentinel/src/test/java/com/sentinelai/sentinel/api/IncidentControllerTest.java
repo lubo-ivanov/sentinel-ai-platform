@@ -32,7 +32,7 @@ public class IncidentControllerTest {
                 id, "boom", "HIGH", "OPEN", "",
                 Instant.now(), Instant.now(), 1,
                 Instant.now(), Instant.now(), 0L,
-                null, null, null, AiSummaryStatus.PENDING
+                null, null, null, null, AiSummaryStatus.PENDING
         );
 
         when(incidentService.findAll()).thenReturn(List.of(incident));

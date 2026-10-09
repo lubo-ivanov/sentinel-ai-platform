@@ -101,7 +101,20 @@ Updated incident details:
 ### 14e — `OLLAMA_NUM_PARALLEL=3` in compose + `incident_enrichment_duration_seconds` metric
 ### 14f — `recentMessages` used in enrichment prompt
 ### 14g — Re-enrichment trigger on escalation (`anomalyCount % (threshold * reenrichMultiplier) == 0`)
-### 14h — `LlmRouter` with severity-based routing
+### 14h — Remediation suggestion — second LLM call after enrichment
+- V8 migration: `remediation_steps TEXT` column on `incidents`
+- `remediationSteps` field on `IncidentEntity` (`@Setter`), `Incident` DTO, `IncidentService.toDto()`
+- `LlmProperties` record in `llm` package: `provider`, `maxAttempts`, `retryBackoff` — bound from `sentinel.llm.*`
+- `IncidentEnrichmentService.suggestRemediation(IncidentEntity, Anomaly)` — second LLM prompt using summary + likely cause + severity + affected subject + recentMessages; returns `Optional<String>` (plain text, not JSON)
+- `enrich()` retry logic: rethrow transient exceptions (network/timeout), return `Optional.empty()` only on `JsonProcessingException` — enables `handleRecord()` to retry via `maxAttempts`
+- `IncidentEnrichmentConsumer.enrichAndSave()`: call `enrich()` then `suggestRemediation()`, set all fields, single `save()`; no `@Transactional` needed (auto-commit per save, `commitSync` is the Kafka durability guarantee)
+- **In progress** — `LlmProperties` stub created, `suggestRemediation()` not yet implemented, `enrichAndSave()` has incomplete `suggestRemediation` call (missing semicolon + method not yet in service), `enrich()` still catches all exceptions
+
+### 14i — `LlmRouter` with severity-based routing
+- `llama3.1:8b` added to `ollama-init` pull list in compose
+- `LlmRouter` bean: `LOW`/`MEDIUM` → `llama3.2:3b`, `HIGH` → `llama3.1:8b`
+- `OllamaClient` accepts model name per-call (or two `OllamaClient` beans with different model configs)
+- `IncidentEnrichmentService` uses router to pick model based on `anomaly.severity()`
 
 ## Things to skip
 - Cancellation of in-flight enrichment.

@@ -82,6 +82,10 @@ public class IncidentEntity {
     @Column(name = "ai_summary_status")
     private AiSummaryStatus aiSummaryStatus = AiSummaryStatus.PENDING;
 
+    @Setter
+    @Column(name = "remediation_steps")
+    private String remediationSteps;
+
     @Version
     @Column(nullable = false)
     private Long version;
