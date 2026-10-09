@@ -8,6 +8,8 @@ import com.sentinelai.sentinel.llm.AiEnrichment;
 import com.sentinelai.sentinel.llm.AiSummaryStatus;
 import com.sentinelai.sentinel.llm.IncidentEnrichmentService;
 import com.sentinelai.sentinel.repository.IncidentRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
@@ -16,25 +18,32 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @Slf4j
 public class IncidentEnrichmentConsumer extends AbstractKafkaConsumer<IncidentEnrichmentMessage> {
 
     private static final String TOPIC = "incidents.enrichment";
+    private static final String METRIC_ENRICHMENT_DURATION = "incident.enrichment.duration";
+    private static final String STATUS = "status";
+    private static final String STATUS_COMPLETED = "completed";
+    private static final String STATUS_FAILED = "failed";
 
     private final IncidentRepository incidentRepository;
     private final IncidentEnrichmentService enrichmentService;
+    private final MeterRegistry meterRegistry;
 
     protected IncidentEnrichmentConsumer(
             KafkaConfig kafkaConfig,
             ObjectMapper objectMapper,
             IncidentRepository incidentRepository,
-            IncidentEnrichmentService enrichmentService
-    ) {
+            IncidentEnrichmentService enrichmentService,
+            MeterRegistry meterRegistry) {
         super(kafkaConfig, objectMapper);
         this.incidentRepository = incidentRepository;
         this.enrichmentService = enrichmentService;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -69,9 +78,22 @@ public class IncidentEnrichmentConsumer extends AbstractKafkaConsumer<IncidentEn
 
 
     private void enrichAndSave(IncidentEntity incident, Anomaly anomaly) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        AtomicBoolean succeeded = new AtomicBoolean(false);
         enrichmentService.enrich(incident, anomaly).ifPresentOrElse(
-                ai -> { applyEnrichment(incident, ai); incidentRepository.save(incident); },
-                () -> { markFailed(incident); incidentRepository.save(incident); }
+                ai -> {
+                    applyEnrichment(incident, ai);
+                    incidentRepository.save(incident);
+                    succeeded.set(true);
+                },
+                () -> {
+                    markFailed(incident);
+                    incidentRepository.save(incident);
+                }
+        );
+        sample.stop(Timer.builder(METRIC_ENRICHMENT_DURATION)
+                .tag(STATUS, succeeded.get() ? STATUS_COMPLETED : STATUS_FAILED)
+                .register(meterRegistry)
         );
     }
 
