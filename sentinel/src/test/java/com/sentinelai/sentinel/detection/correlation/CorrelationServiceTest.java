@@ -3,16 +3,20 @@ package com.sentinelai.sentinel.detection.correlation;
 import com.sentinelai.sentinel.detection.Anomaly;
 import com.sentinelai.sentinel.detection.AnomalyFingerprint;
 import com.sentinelai.sentinel.classifier.Severity;
+import com.sentinelai.sentinel.detection.DetectionProperties;
 import com.sentinelai.sentinel.domain.IncidentEntity;
 import com.sentinelai.sentinel.domain.IncidentStatus;
 import com.sentinelai.sentinel.kafka.IncidentEventPublisher;
 import com.sentinelai.sentinel.repository.IncidentRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,11 +47,27 @@ class CorrelationServiceTest {
     @Mock
     private IncidentEventPublisher eventPublisher;
 
+    @Mock
+    private DetectionProperties props;
+
     private CorrelationService correlationService;
 
     @BeforeEach
     void setUp() {
-        correlationService = new CorrelationService(repository, eventPublisher);
+        TransactionSynchronizationManager.initSynchronization();
+        lenient().when(props.threshold()).thenReturn(5L);
+        lenient().when(props.reenrichMultiplier()).thenReturn(3);
+        lenient().when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
+        correlationService = new CorrelationService(
+                repository,
+                eventPublisher,
+                props
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clearSynchronization();
     }
 
     @Test

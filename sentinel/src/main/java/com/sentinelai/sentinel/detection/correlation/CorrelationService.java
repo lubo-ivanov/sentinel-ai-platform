@@ -2,6 +2,7 @@ package com.sentinelai.sentinel.detection.correlation;
 
 import com.sentinelai.sentinel.detection.Anomaly;
 import com.sentinelai.sentinel.detection.AnomalyFingerprint;
+import com.sentinelai.sentinel.detection.DetectionProperties;
 import com.sentinelai.sentinel.domain.IncidentEntity;
 import com.sentinelai.sentinel.domain.IncidentStatus;
 import com.sentinelai.sentinel.kafka.IncidentEventPublisher;
@@ -9,8 +10,11 @@ import com.sentinelai.sentinel.repository.IncidentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -20,24 +24,30 @@ public class CorrelationService implements AnomalyListener {
 
     private final IncidentRepository incidentRepository;
     private final IncidentEventPublisher eventPublisher;
+    private final DetectionProperties props;
 
     @Override
     public void onAnomaly(Anomaly anomaly) {
         String fingerprint = AnomalyFingerprint.of(anomaly).value();
-        incidentRepository.findByFingerprintAndStatus(fingerprint, IncidentStatus.OPEN)
-                .ifPresentOrElse(
-                        CorrelationService::updateIncident,
-                        () -> createIncident(fingerprint, anomaly)
-                );
+        Optional<IncidentEntity> existing = incidentRepository.findByFingerprintAndStatus(fingerprint, IncidentStatus.OPEN);
+        IncidentEntity incident = existing
+                .map(this::updateIncident)
+                .orElseGet(() -> createIncident(fingerprint, anomaly));
+
+        boolean shouldEnrich = existing.isEmpty() ||
+                incident.getAnomalyCount() % (props.threshold() * props.reenrichMultiplier()) == 0;
+
+        if (shouldEnrich) this.scheduleEnrichment(incident, anomaly);
     }
 
-    private static void updateIncident(IncidentEntity incident) {
+    private IncidentEntity updateIncident(IncidentEntity incident) {
         incident.setAnomalyCount(incident.getAnomalyCount() + 1);
         incident.setLastSeen(Instant.now());
         incident.setSeverity(resolveSeverity(incident.getAnomalyCount()));
+        return incident;
     }
 
-    private void createIncident(String fingerprint, Anomaly anomaly) {
+    private IncidentEntity createIncident(String fingerprint, Anomaly anomaly) {
         IncidentEntity entity = new IncidentEntity(
                 UUID.randomUUID(),
                 "Anomaly: " + anomaly.ruleId(),
@@ -47,9 +57,19 @@ public class CorrelationService implements AnomalyListener {
                 1
         );
 
-        incidentRepository.save(entity);
-        eventPublisher.publish("incidents.enrichment", entity.getId().toString(), new IncidentEnrichmentMessage(entity.getId(), anomaly));
+        return incidentRepository.save(entity);
     }
+
+    private void scheduleEnrichment(IncidentEntity incident, Anomaly anomaly) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                eventPublisher.publish("incidents.enrichment", incident.getId().toString(),
+                        new IncidentEnrichmentMessage(incident.getId(), anomaly));
+            }
+        });
+    }
+
 
     private static String resolveSeverity(int count) {
         if (count >= 10) return "HIGH";
