@@ -63,12 +63,13 @@ public class IncidentEnrichmentService {
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
     private final LlmProperties props;
+    private final LLmRouter router;
 
     public Optional<AiEnrichment> enrich(IncidentEntity incident, Anomaly anomaly) {
         for (int attempt = 1; attempt <= props.maxAttempts(); attempt++) {
             try {
                 String prompt = buildEnrichmentPrompt(incident, anomaly);
-                String raw = llmClient.generate(prompt);
+                String raw = llmClient.generate(prompt, router.modelFor(incident.getSeverity()), true);
                 AiEnrichment enrichment = objectMapper.readValue(raw, AiEnrichment.class);
                 return Optional.of(enrichment);
             } catch (Exception e) {
@@ -84,7 +85,7 @@ public class IncidentEnrichmentService {
         for (int attempt = 1; attempt <= props.maxAttempts(); attempt++) {
             try {
                 String prompt = buildRemediationPrompt(incident, anomaly);
-                return Optional.of(llmClient.generate(prompt));
+                return Optional.of(llmClient.generate(prompt, router.modelFor(incident.getSeverity()), false));
             } catch (Exception e) {
                 log.error("LLM remediation generation failed for incident id={}", incident.getId(), e);
                 sleep(props.retryBackoff());

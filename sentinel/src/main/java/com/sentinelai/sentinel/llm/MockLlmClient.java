@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class MockLlmClient implements  LlmClient {
     @Override
-    public String generate(String prompt) {
+    public String generate(String prompt, String model, boolean jsonMode) {
         log.debug("MockLlmClient returning canned response");
         return """
                 {

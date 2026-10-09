@@ -19,11 +19,9 @@ import java.util.Map;
 public class OllamaClient implements  LlmClient {
 
     private final RestClient restClient;
-    private final String model;
 
     public OllamaClient(
-            @Value("${ollama.base-url:http://ollama:11434}") String baseUrl,
-            @Value("${ollama.model:llama3.2:3b}") String model
+            @Value("${ollama.base-url:http://ollama:11434}") String baseUrl
     ) {
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
@@ -32,18 +30,16 @@ public class OllamaClient implements  LlmClient {
                     setReadTimeout(Duration.ofSeconds(60));
                 }})
                 .build();
-        this.model = model;
     }
 
     @Override
-    public String generate(String prompt) {
-        Map<String, Object> request = Map.of(
-                "model", model,
-                "prompt", prompt,
-                "stream", false,
-                "format", "json",
-                "options", Map.of("temperature", 0)
-        );
+    public String generate(String prompt, String model, boolean jsonMode) {
+        Map<String, Object> request = new java.util.HashMap<>();
+        request.put("model", model);
+        request.put("prompt", prompt);
+        request.put("stream", false);
+        request.put("options", Map.of("temperature", 0));
+        if (jsonMode) request.put("format", "json");
 
         ResponseEntity<Map<String, Object>> response = restClient.post()
                 .uri("/api/generate")

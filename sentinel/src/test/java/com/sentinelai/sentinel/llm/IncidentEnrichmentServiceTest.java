@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -35,7 +36,7 @@ class IncidentEnrichmentServiceTest {
     @BeforeEach
     void setUp() throws IOException {
         LlmProperties llmProperties = new LlmProperties("ollama", 1, java.time.Duration.ofMillis(0));
-        enrichmentService = new IncidentEnrichmentService(llmClient, new ObjectMapper(), llmProperties);
+        enrichmentService = new IncidentEnrichmentService(llmClient, new ObjectMapper(), llmProperties, new LLmRouter());
         try (var stream = getClass().getClassLoader().getResourceAsStream("ollama-response.json")) {
             capturedResponse = new String(stream.readAllBytes());
         }
@@ -55,7 +56,7 @@ class IncidentEnrichmentServiceTest {
                 Severity.ERROR,
                 List.of()
         );
-        when(llmClient.generate(anyString())).thenReturn(capturedResponse);
+        when(llmClient.generate(anyString(), anyString(), anyBoolean())).thenReturn(capturedResponse);
 
         Optional<AiEnrichment> result = enrichmentService.enrich(incident, anomaly);
 
@@ -79,7 +80,7 @@ class IncidentEnrichmentServiceTest {
                 Severity.ERROR,
                 List.of()
         );
-        when(llmClient.generate(anyString())).thenThrow(new RuntimeException("Ollama down"));
+        when(llmClient.generate(anyString(), anyString(), anyBoolean())).thenThrow(new RuntimeException("Ollama down"));
 
         Optional<AiEnrichment> result = enrichmentService.enrich(incident, anomaly);
 

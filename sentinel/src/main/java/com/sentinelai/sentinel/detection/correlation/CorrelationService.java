@@ -4,6 +4,7 @@ import com.sentinelai.sentinel.detection.Anomaly;
 import com.sentinelai.sentinel.detection.AnomalyFingerprint;
 import com.sentinelai.sentinel.detection.DetectionProperties;
 import com.sentinelai.sentinel.domain.IncidentEntity;
+import com.sentinelai.sentinel.domain.IncidentSeverity;
 import com.sentinelai.sentinel.domain.IncidentStatus;
 import com.sentinelai.sentinel.kafka.IncidentEventPublisher;
 import com.sentinelai.sentinel.repository.IncidentRepository;
@@ -72,8 +73,8 @@ public class CorrelationService implements AnomalyListener {
 
 
     private static String resolveSeverity(int count) {
-        if (count >= 10) return "HIGH";
-        if (count >= 5) return "MEDIUM";
-        return "LOW";
+        if (count >= 10) return IncidentSeverity.HIGH.name();
+        if (count >= 5) return IncidentSeverity.MEDIUM.name();
+        return IncidentSeverity.LOW.name();
     }
 }
