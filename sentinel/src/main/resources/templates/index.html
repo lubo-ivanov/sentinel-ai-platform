@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>SentinelAI</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+</head>
+<body>
+<main class="container">
+    <h1>Sentinel AI - Incidents</h1>
+    <table hx-get="/" hx-trigger="every 3s" hx-swap="outerHTML" hx-select="table">
+        <thead>
+        <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Count</th>
+            <th>Last Seen</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+            <tr th:each="i : ${incidents}">
+                <td th:text="${i.severity()}"></td>
+                <td th:text="${i.title()}"></td>
+                <td th:text="${i.status()}"></td>
+                <td th:text="${i.anomalyCount()}"></td>
+                <td th:text="${i.lastSeen()}"></td>
+                <td><a th:href="@{/incidents/{id}(id=${i.id()})}">View</a></td>
+            </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

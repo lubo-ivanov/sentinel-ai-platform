@@ -81,10 +81,10 @@ public class IncidentEnrichmentService {
     }
 
 
-    public Optional<String> suggestRemediation(IncidentEntity incident, Anomaly anomaly) {
+    public Optional<String> suggestRemediation(IncidentEntity incident, Anomaly anomaly, AiEnrichment aiEnrichment) {
         for (int attempt = 1; attempt <= props.maxAttempts(); attempt++) {
             try {
-                String prompt = buildRemediationPrompt(incident, anomaly);
+                String prompt = buildRemediationPrompt(incident, anomaly, aiEnrichment);
                 return Optional.of(llmClient.generate(prompt, router.modelFor(incident.getSeverity()), false));
             } catch (Exception e) {
                 log.error("LLM remediation generation failed for incident id={}", incident.getId(), e);
@@ -112,13 +112,13 @@ public class IncidentEnrichmentService {
         );
     }
 
-    private String buildRemediationPrompt(IncidentEntity incident, Anomaly anomaly) {
+    private String buildRemediationPrompt(IncidentEntity incident, Anomaly anomaly, AiEnrichment aiEnrichment) {
         String messages = anomaly.recentMessages().stream().filter(Objects::nonNull)
                 .map(m -> "- " + m)
                 .collect(Collectors.joining("\n"));
         return REMEDIATION_TEMPLATE.formatted(
-                Objects.toString(incident.getAiSummary(), "N/A"),
-                Objects.toString(incident.getAiLikelyCause(), "N/A"),
+                Objects.toString(aiEnrichment.summary(), "N/A"),
+                Objects.toString(aiEnrichment.likelyCause(), "N/A"),
                 incident.getSeverity(),
                 anomaly.keys(),
                 messages

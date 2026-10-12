@@ -8,5 +8,5 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface IncidentRepository extends JpaRepository<IncidentEntity, UUID> {
-    public Optional<IncidentEntity> findByFingerprintAndStatus(String fingerprint, IncidentStatus status);
+    Optional<IncidentEntity> findByFingerprintAndStatus(String fingerprint, IncidentStatus status);
 }

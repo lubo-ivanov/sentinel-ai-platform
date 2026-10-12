@@ -49,7 +49,7 @@ sentinel:
   dedup:
     ttl: 24h
   detection:
-    window: 60
+    window: 60s
     threshold: 5
     max-recent-messages: 5
     reenrich-multiplier: 3

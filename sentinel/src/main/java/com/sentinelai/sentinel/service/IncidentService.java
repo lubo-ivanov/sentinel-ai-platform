@@ -2,14 +2,17 @@ package com.sentinelai.sentinel.service;
 
 import com.sentinelai.sentinel.api.Incident;
 import com.sentinelai.sentinel.api.IncidentRequest;
+import com.sentinelai.sentinel.domain.IncidentEnrichmentEntity;
 import com.sentinelai.sentinel.domain.IncidentEntity;
 import com.sentinelai.sentinel.domain.IncidentStatus;
+import com.sentinelai.sentinel.repository.IncidentEnrichmentRepository;
 import com.sentinelai.sentinel.repository.IncidentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,21 +20,32 @@ import java.util.UUID;
 import static com.sentinelai.sentinel.domain.IncidentStatus.ACKED;
 import static com.sentinelai.sentinel.domain.IncidentStatus.OPEN;
 import static com.sentinelai.sentinel.domain.IncidentStatus.RESOLVED;
+import static java.util.stream.Collectors.toMap;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class IncidentService {
-    private final IncidentRepository repository;
+
+    private final IncidentRepository incidentRepository;
+    private final IncidentEnrichmentRepository incidentEnrichmentRepository;
 
     @Transactional(readOnly = true)
     public List<Incident> findAll() {
-        return repository.findAll().stream().map(IncidentService::toDto).toList();
+
+        Map<UUID, IncidentEnrichmentEntity> enrichments = incidentEnrichmentRepository.findAll()
+                .stream()
+                .collect(toMap(IncidentEnrichmentEntity::getIncidentId, e -> e));
+        return incidentRepository.findAll()
+                .stream()
+                .map((e -> toDto(e, enrichments.get(e.getId()))))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public Optional<Incident> findById(UUID id) {
-        return repository.findById(id).map(IncidentService::toDto);
+        IncidentEnrichmentEntity enrichment = incidentEnrichmentRepository.findByIncidentId(id).orElse(null);
+        return incidentRepository.findById(id).map(e -> toDto(e, enrichment));
     }
 
     public Incident create(IncidentRequest request) {
@@ -43,12 +57,12 @@ public class IncidentService {
                 "",
                 1
         );
-        IncidentEntity saved = repository.save(entity);
-        return toDto(saved);
+        IncidentEntity saved = incidentRepository.save(entity);
+        return toDto(saved, null);
     }
 
     public Incident acknowledge(UUID id) {
-        IncidentEntity entity = repository.findById(id)
+        IncidentEntity entity = incidentRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + id));
         if (entity.getStatus() == RESOLVED) {
             throw new IllegalStateException("Cannot acknowledge a resolved incident");
@@ -56,23 +70,27 @@ public class IncidentService {
 
         if (entity.getStatus() == OPEN) {
             entity.setStatus(ACKED);
-            entity = repository.save(entity);
+            entity = incidentRepository.save(entity);
         }
-        return toDto(entity);
+
+        IncidentEnrichmentEntity enrichment = incidentEnrichmentRepository.findByIncidentId(id).orElse(null);
+        return toDto(entity, enrichment);
     }
 
     public Incident resolve(UUID id) {
-        IncidentEntity entity = repository.findById(id)
+        IncidentEntity entity = incidentRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Incident not found: " + id));
         if (entity.getStatus() != RESOLVED) {
             entity.setStatus(IncidentStatus.RESOLVED);
-            entity = repository.save(entity);
+            entity = incidentRepository.save(entity);
         }
-        return toDto(entity);
+        IncidentEnrichmentEntity enrichment = incidentEnrichmentRepository.findByIncidentId(id).orElse(null);
+        return toDto(entity, enrichment);
     }
 
 
-    private static Incident toDto(IncidentEntity e) {
+    private static Incident toDto(IncidentEntity e, IncidentEnrichmentEntity ee) {
+        boolean hasEnrichment = ee != null;
         return new Incident(
                 e.getId(),
                 e.getTitle(),
@@ -85,11 +103,11 @@ public class IncidentService {
                 e.getCreatedAt(),
                 e.getUpdatedAt(),
                 e.getVersion(),
-                e.getAiSummary(),
-                e.getAiLikelyCause(),
-                e.getAiGeneratedAt(),
-                e.getRemediationSteps(),
-                e.getAiSummaryStatus()
+                hasEnrichment ? ee.getAiSummary() : null,
+                hasEnrichment ? ee.getAiLikelyCause() : null,
+                hasEnrichment ? ee.getGeneratedAt() : null,
+                hasEnrichment ? ee.getRemediationSteps() : null,
+                hasEnrichment ? ee.getAiSummaryStatus() : null
         );
     }
 

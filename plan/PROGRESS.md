@@ -26,8 +26,8 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 | 12 | [LLM integration v1](steps/step-12-llm-v1.md) | ✅ | 12a: Ollama in compose (`ollama-init` pulls model, `sentinel` depends on `service_completed_successfully`), V7 migration (ai_summary, ai_likely_cause, ai_generated_at, ai_summary_status columns). 12b: `OllamaClient` (RestClient, 5s connect/60s read timeout, `ParameterizedTypeReference`, NPE guard). 12c: `AiEnrichment` record + `AiSummaryStatus` enum + `IncidentEnrichmentService` (prompt template with rule descriptions + specificity instruction, `Optional` return, catch-all fallback). 12d: `CorrelationService` wired — enrich on create only, `firstSeen` set in constructor (single save). 12e: `IncidentEnrichmentServiceTest` — mocked `LlmClient`, captured response as test resource. `IncidentEntity` AI fields, `Incident` DTO updated, `IncidentService.toDto()` maps AI fields. Healthcheck fixed: `curl` not in Ollama image → switched to `ollama list`. `lastSeen` `@Generated` removed — Java owns value. |
 | 12.5 | [LLM classifier fallback](steps/step-12.5-llm-classifier-fallback.md) | ⬜ | New step. Batch LLM proposes classifications for `UNCLASSIFIED`; human accepts → new rule. |
 | 13 | [LLM provider abstraction](steps/step-13-llm-abstraction.md) | ✅ | 13a: `LlmClient` interface, `OllamaClient` implements it, `IncidentEnrichmentService` depends on interface. 13b: `MockLlmClient` (`@ConditionalOnProperty(havingValue="mock")`), `OllamaClient` gets `matchIfMissing=true`. 13c: `LlmRouter` deferred to step 14. 13d: `IncidentEnrichmentServiceTest` updated to mock `LlmClient` interface. |
-| 14 | [Parallel LLM enrichment](steps/step-14-virtual-threads.md) | 🟡 | 14a-14g ✅. 14h 🟡 in progress: V8 migration done, `remediationSteps` on entity+DTO done, `LlmProperties` stub created. Still needed: `suggestRemediation()` in `IncidentEnrichmentService` (prompt + retry logic), wire into `enrichAndSave()`, `enrich()` exception handling split (JsonProcessingException vs transient). |
-| 15 | [Dashboard UI](steps/step-15-dashboard.md) | ⬜ | Adds classifier triage view. |
+| 14 | [Parallel LLM enrichment](steps/step-14-virtual-threads.md) | ✅ | 14a-14i all done. Virtual thread fan-out, Kafka-backed enrichment pipeline, re-enrichment on escalation, remediation suggestion with LLM retries (`LlmProperties`), severity-based model routing (`LLmRouter`, `IncidentSeverity` enum), `jsonMode` flag to avoid JSON-forcing on plain-text remediation responses. |
+| 15 | [Dashboard UI](steps/step-15-dashboard.md) | 🟡 | 15a done: Thymeleaf + devtools deps, `DashboardController`, `index.html` with Pico CSS + HTMX polling. Bugs fixed: `window: 60` → `window: 60s` (was binding as ms not seconds). Enrichment save conflict redesign in progress (see cross-cutting decisions). Still needed: native update query for AI fields, re-enrichment cooldown, detail page (`incident.html`), ack/resolve buttons. |
 | 16 | [Notification routing](steps/step-16-notifications.md) | ⬜ | |
 | 17 | [Observability polish](steps/step-17-observability.md) | ⬜ | Classifier metrics too. |
 | 18 | [Demo polish and README](steps/step-18-demo-polish.md) | ⬜ | |
@@ -74,7 +74,11 @@ Rules for how the author and the assistant collaborate on this project. Read the
 - **Ollama healthcheck (2026-10-08):** `curl` not available in `ollama/ollama:latest` image. Healthcheck switched to `ollama list`. `ollama-init` container pulls model after Ollama healthy; `sentinel` depends on `ollama-init: service_completed_successfully` to avoid enrichment failures before model is ready.
 
 
-## Concepts internalized
+- **Enrichment/correlation write contention (2026-10-10):** `IncidentEnrichmentConsumer` holds a stale entity across a ~12s LLM call. `CorrelationService` updates the same row during that time, incrementing `@Version`. Enrichment save fails with `ObjectOptimisticLockingFailureException` on all 3 retries — Kafka offset commits, message lost, incident stays `PENDING`. Fix: (1) native `@Modifying @Query` in `IncidentRepository` for AI fields only — bypasses Hibernate version check entirely since enrichment and correlation own different columns; (2) `reenrichCooldown` in `DetectionProperties` to gate re-enrichment by both count threshold and time since last enrichment (prevents re-enrichment firing faster than LLM can respond).
+- **`window: 60` binds as milliseconds (2026-10-10):** Spring Boot binds plain integers for `Duration` as milliseconds, not seconds. Fixed to `window: 60s`.
+- **Virtual threads removed from `IncidentEnrichmentConsumer` (2026-10-10):** Originally designed for fan-out across enrichment records. Removed because: records can reference the same incident (re-enrichment), causing optimistic lock conflicts. Sequential processing is correct here. VTs still used in sidecar `ForwarderRunner` drain loop.
+
+
 
 - **Step 01:** Spring Boot auto-config, records as DTOs, constructor injection, `@WebMvcTest` slice tests, why field injection is the convention in test classes.
 - **Step 02:** `ArrayList.add()` race (read-modify-write), `CountDownLatch` as starting gun + finish line, executor pool + queue model, `synchronized` (atomicity + memory visibility), `ConcurrentHashMap` lock striping, immutable snapshot vs live view trade-off.
@@ -83,13 +87,34 @@ Rules for how the author and the assistant collaborate on this project. Read the
 
 ## Next up
 
-**Step 14** — Parallel LLM enrichment with virtual threads. Sub-steps:
-- 14a: `recentMessages` in `Anomaly` + `AbstractBurstRule` collects them ✅
-- 14b: `incidents.enrichment` Kafka topic + `IncidentEnrichmentMessage` published by `CorrelationService` (replaces Spring event approach — Kafka gives durability/replay on recovery)
-- 14c: `IncidentEnrichmentConsumer` — extends `AbstractKafkaConsumer`, calls `IncidentEnrichmentService`, virtual thread executor
-- 14d: parallel fan-out (summary + remediation) via `StructuredTaskScope`
-- 14e: `OLLAMA_NUM_PARALLEL=3` + enrichment duration metrics
-- 14f: `recentMessages` used in prompt
-- 14g: re-enrichment trigger on escalation
-- 14h: remediation suggestion — second LLM call after enrichment, `remediationSteps` field on incident
-- 14i: `LlmRouter` — severity-based routing (`LOW`/`MEDIUM` → `llama3.2:3b`, `HIGH` → `llama3.1:8b`)
+**Step 15 (in progress)** — Dashboard UI. Immediate work:
+
+### Enrichment save conflict fix (before UI work continues)
+**Root cause:** `IncidentEnrichmentConsumer` fetches the entity, then calls LLM (~12s), then tries to `save()`. During those 12s, `CorrelationService` updates the same entity (increments `anomalyCount`, bumps `@Version`). Hibernate's optimistic lock check sees the stale version and throws `ObjectOptimisticLockingFailureException`. All 3 retry attempts fail on the same version mismatch — Kafka offset commits, enrichment message is lost, incident stays `PENDING` forever.
+
+**Why `@Version` fires:** `repository.save()` does a full Hibernate merge — it checks `@Version` regardless of which fields changed. Enrichment and correlation write completely different fields (`ai_*` vs `anomaly_count`/`last_seen`) but `@Version` doesn't know that.
+
+**Fix 1 — Native update query (primary fix):**
+Add `updateEnrichment()` to `IncidentRepository` using `@Modifying @Query("UPDATE IncidentEntity ...")` — direct SQL, bypasses Hibernate's optimistic lock check entirely. Each component owns its fields:
+- `CorrelationService` owns: `anomaly_count`, `last_seen`, `severity` — still uses `save()` with `@Version`
+- `IncidentEnrichmentConsumer` owns: `ai_summary`, `ai_likely_cause`, `ai_generated_at`, `ai_summary_status`, `remediation_steps` — uses native update, no version check
+
+**Fix 2 — Re-enrichment cooldown (reduces contention frequency):**
+Add `reenrichCooldown` to `DetectionProperties` (e.g. `5m`). In `CorrelationService.onAnomaly()`, gate re-enrichment on both count threshold AND time since last enrichment:
+```java
+boolean shouldEnrich = existing.isEmpty() ||
+    (incident.getAnomalyCount() % (props.threshold() * props.reenrichMultiplier()) == 0
+     && isEnrichmentStale(incident));
+
+private boolean isEnrichmentStale(IncidentEntity incident) {
+    return incident.getAiGeneratedAt() == null ||
+        incident.getAiGeneratedAt().isBefore(Instant.now().minus(props.reenrichCooldown()));
+}
+```
+This means re-enrichment fires at anomaly count multiples (15, 30, 45...) AND only if last enrichment was more than `reenrichCooldown` ago. Drastically reduces the chance of concurrent writes.
+
+**Virtual threads decision:** Removed `processBatch` override from `IncidentEnrichmentConsumer` — sequential processing per record. Virtual threads don't help here because: (a) enrichment is sequential by design (remediation needs enrichment result), (b) records can reference the same incident. Interview talking point: "Designed for virtual thread fan-out, removed after hitting optimistic lock contention — sequential is safer when records share entities."
+
+### Remaining UI work (15b, 15c)
+- 15b: `GET /incidents/{id}` in `DashboardController` + `incident.html` with AI summary, remediation, severity, status, timeline
+- 15c: ack/resolve buttons via HTMX `hx-post` — `POST /incidents/{id}/ack` and `POST /incidents/{id}/resolve`
