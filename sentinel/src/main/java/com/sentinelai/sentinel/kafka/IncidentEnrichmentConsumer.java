@@ -75,19 +75,18 @@ public class IncidentEnrichmentConsumer extends AbstractKafkaConsumer<IncidentEn
     }
 
     protected void enrichAndSave(UUID incidentId, Anomaly anomaly) {
-        do {
-            waitForEnrichmentSlot(incidentId);
-        } while (!claimEnrichment(incidentId));
-
-        IncidentEntity incident = incidentRepository.findById(incidentId).orElse(null);
-        IncidentEnrichmentEntity enrichmentEntity= enrichmentRepository.findByIncidentId(incidentId).orElseThrow();
+        IncidentEntity incident = waitForIncident(incidentId);
 
         if (incident == null) {
-            log.warn("Incident not found for enrichment id={}", incidentId);
-            markFailed(enrichmentEntity);
-            enrichmentRepository.save(enrichmentEntity);
+            log.warn("Incident not visible after polling, dropping enrichment for id={}", incidentId);
             return;
         }
+
+        do {
+            waitForEnrichmentSlot(incidentId);
+        } while (isEnrichmentBusy(incidentId));
+
+        IncidentEnrichmentEntity enrichmentEntity= enrichmentRepository.findByIncidentId(incidentId).orElseThrow();
 
         Timer.Sample sample = Timer.start(meterRegistry);
         AtomicBoolean succeeded = new AtomicBoolean(false);
@@ -108,28 +107,38 @@ public class IncidentEnrichmentConsumer extends AbstractKafkaConsumer<IncidentEn
         }
     }
 
+    private IncidentEntity waitForIncident(UUID incidentId) {
+        for (int i = 1; i <= 3; i++) {
+            Optional<IncidentEntity> incident = incidentRepository.findById(incidentId);
+            if (incident.isPresent()) return incident.get();
+            log.info("Incident not yet visible id={}, poll {}/3", incidentId, i);
+            sleep(Duration.ofSeconds(2));
+        }
+        return null;
+    }
 
-    private boolean claimEnrichment(UUID incidentId) {
+    private boolean isEnrichmentBusy(UUID incidentId) {
         try {
             IncidentEnrichmentEntity enrichment = enrichmentRepository.findByIncidentId(incidentId)
                     .orElse(new IncidentEnrichmentEntity(incidentId, AiSummaryStatus.IN_PROGRESS));
             enrichment.setAiSummaryStatus(AiSummaryStatus.IN_PROGRESS);
             enrichmentRepository.save(enrichment);
-            return true;
+            return false;
         } catch (DataIntegrityViolationException | ObjectOptimisticLockingFailureException e) {
             log.info("Enrichment claim lost race for incident={}, retrying", incidentId);
-            return false;
+            return true;
         }
     }
 
     private void waitForEnrichmentSlot(UUID incidentId) {
         for (int i = 1; i <= 3; i++) {
             Optional<IncidentEnrichmentEntity> existing = enrichmentRepository.findByIncidentId(incidentId);
-            if (existing.isEmpty() || existing.get().getAiSummaryStatus() != AiSummaryStatus.IN_PROGRESS) {
-                return;
+            if (existing.isPresent() && existing.get().getAiSummaryStatus() == AiSummaryStatus.IN_PROGRESS) {
+                log.info("Enrichment IN_PROGRESS for incident={}, poll{}/3", incidentId, i);
+                sleep(Duration.ofSeconds(20));
+                continue;
             }
-            log.info("Enrichment IN_PROGRESS for incident={}, poll{}/3", incidentId, i);
-            sleep(Duration.ofSeconds(20));
+            return;
         }
 
         enrichmentRepository.findByIncidentId(incidentId).ifPresent(enrichment -> {
