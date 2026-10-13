@@ -94,6 +94,7 @@ The project is built in ~18 small steps. Each step adds one concept, ends in a r
 | 15 | [Dashboard UI](steps/step-15-dashboard.md) | HTMX list, ack/resolve, live updates, signal→event traceability |
 | 16 | [Notification routing](steps/step-16-notifications.md) | Console + mock webhook, dedup, cooldown |
 | 17 | [Observability polish](steps/step-17-observability.md) | Grafana dashboard, correlation IDs, classifier metrics, health checks |
+| 17.5 | [Producer signal variety](steps/step-09.6-producer-signal-variety.md) | Realistic varied hints per emit — multiple providers, SKUs, amounts, durations — richer LLM context |
 | 18 | [Demo polish and README](steps/step-18-demo-polish.md) | Demo video, README, architecture diagram |
 
 ## Working rhythm

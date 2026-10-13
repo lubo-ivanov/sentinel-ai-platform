@@ -30,6 +30,7 @@ Status legend: ✅ done · 🟡 in progress · ⬜ not started
 | 15 | [Dashboard UI](steps/step-15-dashboard.md) | 🟡 | 15a done: Thymeleaf + devtools deps, `DashboardController`, `index.html` with Pico CSS + HTMX polling. Bugs fixed: `window: 60` → `window: 60s` (was binding as ms not seconds). Enrichment save conflict redesign in progress (see cross-cutting decisions). Still needed: native update query for AI fields, re-enrichment cooldown, detail page (`incident.html`), ack/resolve buttons. |
 | 16 | [Notification routing](steps/step-16-notifications.md) | ⬜ | |
 | 17 | [Observability polish](steps/step-17-observability.md) | ⬜ | Classifier metrics too. |
+| 17.5 | [Producer signal variety](steps/step-09.6-producer-signal-variety.md) | ⬜ | Varied providers, SKUs, amounts, durations for richer LLM summaries and demo realism. |
 | 18 | [Demo polish and README](steps/step-18-demo-polish.md) | ⬜ | |
 
 ## Working conventions
