@@ -37,6 +37,21 @@
             </tr>
         </table>
 
+        <div style="margin-top: 1rem;">
+            <button hx-post="/incidents/__${incident.id()}__/ack"
+                    hx-target="main"
+                    hx-swap="innerHTML"
+                    th:if="${incident.status() == 'OPEN'}">
+                Acknowledge
+            </button>
+            <button hx-post="/incidents/__${incident.id()}__/resolve"
+                    hx-target="main"
+                    hx-swap="innerHTML"
+                    th:if="${incident.status() != 'RESOLVED'}">
+                Resolve
+            </button>
+        </div>
+
         <div th:if="${incident.aiSummaryStatus() != null}">
             <h2>AI Enrichment</h2>
             <p>
