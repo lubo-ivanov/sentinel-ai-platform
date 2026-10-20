@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Incident Detail</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+</head>
+<body>
+<main class="container">
+    <a href="/"><- Back</a>
+    <div th:if="${incident}">
+        <h1 th:text="${incident.title()}"></h1>
+        <table>
+            <tr>
+                <th>Severity</th>
+                <td th:text="${incident.severity()}"></td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td th:text="${incident.status()}"></td>
+            </tr>
+            <tr>
+                <th>Anomaly Count</th>
+                <td th:text="${incident.anomalyCount()}"></td>
+            </tr>
+            <tr>
+                <th>First Seen</th>
+                <td th:text="${incident.firstSeen()}"></td>
+            </tr>
+            <tr>
+                <th>Last Seen</th>
+                <td th:text="${incident.lastSeen()}"></td>
+            </tr>
+        </table>
+
+        <div th:if="${incident.aiSummaryStatus() != null}">
+            <h2>AI Enrichment</h2>
+            <p>
+                <strong>Status:</strong> <span th:text="${incident.aiSummaryStatus()}"></span>
+            </p>
+            <div th:if="${incident.aiSummary() != null}">
+                <p>
+                    <strong>Summary:</strong> <span th:text="${incident.aiSummary()}"></span>
+                </p>
+                <p>
+                    <strong>Likely Cause:</strong> <span th:text="${incident.aiLikelyCause()}"></span>
+                </p>
+            </div>
+            <div th:if="${incident.remediationSteps() != null}">
+                <h3>Remediation</h3>
+                <pre th:text="${incident.remediationSteps()}"></pre>
+            </div>
+        </div>
+    </div>
+    <p th:unless="${incident}">Incident not found.</p>
+</main>
+</body>
+</html>
